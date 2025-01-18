@@ -18,16 +18,13 @@ module.exports = {
         'extensions': ['Bethesda', 'Silver Spring', 'Gaithersburg', 'Bowie', 'Hagerstown']
     },
 
-    run: function() {
+    run: function(spawn) {
         // Clear memory of dead creeps
         for(let name in Memory.creeps) {
             if(!Game.creeps[name]) {
                 delete Memory.creeps[name];
             }
         }
-
-        const spawn = Game.spawns['Spawn1'];
-        if(!spawn) return;
 
         // Get current creep counts
         const harvesters = _.filter(Game.creeps, creep => creep.memory.role === 'harvester');
@@ -38,45 +35,46 @@ module.exports = {
         const minCreeps = {
             harvester: 4,
             upgrader: 2,
-            builder: 6  // Increased for multiple tower construction
+            builder: 6  // Increased for tower construction
         };
 
-        // Debug output every 30 ticks
-        if(Game.time % 30 === 0) {
-            console.log(`Creep Balance - H:${harvesters.length}/${minCreeps.harvester} U:${upgraders.length}/${minCreeps.upgrader} B:${builders.length}/${minCreeps.builder}`);
-        }
-
-        // Don't spawn if already spawning
-        if(spawn.spawning) {
-            this.showSpawningVisual(spawn);
-            return;
-        }
+        // Check for tower construction sites
+        const towerSites = spawn.room.find(FIND_CONSTRUCTION_SITES, {
+            filter: site => site.structureType === STRUCTURE_TOWER
+        });
 
         const energyAvailable = spawn.room.energyAvailable;
         
-        // Spawn priority logic
-        if(harvesters.length < minCreeps.harvester) {
-            this.spawnCreep(spawn, 'harvester', energyAvailable);
-        }
-        else if(builders.length < minCreeps.builder) {  // Prioritize builders over upgraders
-            this.spawnCreep(spawn, 'builder', energyAvailable);
-        }
-        else if(upgraders.length < minCreeps.upgrader) {
-            this.spawnCreep(spawn, 'upgrader', energyAvailable);
+        // Priority order based on tower construction needs
+        if(towerSites.length > 0) {
+            // If towers need building, prioritize builders after minimum harvesters
+            if(harvesters.length < minCreeps.harvester) {
+                this.spawnCreep(spawn, 'harvester', energyAvailable);
+            } else if(builders.length < minCreeps.builder) {
+                this.spawnCreep(spawn, 'builder', energyAvailable);
+            } else if(upgraders.length < minCreeps.upgrader) {
+                this.spawnCreep(spawn, 'upgrader', energyAvailable);
+            }
+        } else {
+            // Normal priority when no towers need building
+            if(harvesters.length < minCreeps.harvester) {
+                this.spawnCreep(spawn, 'harvester', energyAvailable);
+            } else if(upgraders.length < minCreeps.upgrader) {
+                this.spawnCreep(spawn, 'upgrader', energyAvailable);
+            } else if(builders.length < minCreeps.builder) {
+                this.spawnCreep(spawn, 'builder', energyAvailable);
+            }
         }
 
-        // If we have construction sites, spawn extra builders
-        const constructionSites = spawn.room.find(FIND_CONSTRUCTION_SITES);
-        if(constructionSites.length > 10 && builders.length < 4 && 
-           harvesters.length >= minCreeps.harvester) {
-            this.spawnCreep(spawn, 'builder', energyAvailable);
-        }
-
-        // If we're near RCL upgrade, add an upgrader
-        const controller = spawn.room.controller;
-        if(controller && controller.progress > controller.progressTotal * 0.8 &&
-           upgraders.length < 3 && harvesters.length >= minCreeps.harvester) {
-            this.spawnCreep(spawn, 'upgrader', energyAvailable);
+        // Spawn visualization
+        if(spawn.spawning) {
+            const spawningCreep = Game.creeps[spawn.spawning.name];
+            spawn.room.visual.text(
+                '🛠️ ' + spawningCreep.memory.role,
+                spawn.pos.x + 1,
+                spawn.pos.y,
+                {align: 'left', opacity: 0.8}
+            );
         }
     },
 
