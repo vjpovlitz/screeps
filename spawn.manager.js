@@ -8,14 +8,19 @@ const roleHarvester = require('role.harvester');
 module.exports = {
     run: function() {
         const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
-        console.log('Harvesters: ' + harvesters.length);
-
-        // Spawn more harvesters if we have less than 2
+        const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
+        
+        // Spawn harvesters first
         if(harvesters.length < 2) {
             const newName = 'Harvester' + Game.time;
-            console.log('Spawning new harvester: ' + newName);
             Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName, 
                 {memory: {role: 'harvester'}});
+        }
+        // Then spawn upgraders
+        else if(upgraders.length < 2) {
+            const newName = 'Upgrader' + Game.time;
+            Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName,
+                {memory: {role: 'upgrader'}});
         }
 
         // Visual notification when spawning
