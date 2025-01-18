@@ -140,14 +140,21 @@ module.exports = {
     },
 
     getOptimalBody: function(energy) {
-        if(energy >= 800) {
-            return [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE];
-        } else if(energy >= 550) {
-            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
-        } else if(energy >= 400) {
-            return [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+        // Enhanced body configurations
+        if(energy >= 1200) {
+            return [
+                WORK, WORK, WORK, WORK, WORK,    // 500
+                CARRY, CARRY, CARRY, CARRY,      // 200
+                MOVE, MOVE, MOVE, MOVE, MOVE     // 500
+            ];
+        } else if(energy >= 800) {
+            return [
+                WORK, WORK, WORK, WORK,          // 400
+                CARRY, CARRY, CARRY,             // 150
+                MOVE, MOVE, MOVE, MOVE           // 250
+            ];
         }
-        return [WORK, CARRY, MOVE];
+        return [WORK, WORK, CARRY, CARRY, MOVE, MOVE]; // Basic 400 energy build
     },
 
     getOptimalMineralBody: function(energy) {
