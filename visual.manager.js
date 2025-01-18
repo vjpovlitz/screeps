@@ -1,53 +1,54 @@
 module.exports = {
     run: function(room) {
-        const dashX = 35;  // Right side position
-        const dashY = 1;   // Top position
+        // Main dashboard
+        const dashX = 35;
+        const dashY = 1;
         const lineHeight = 1.2;
         const padding = 0.5;
-        const boxWidth = 16;  // Made boxes more compact
+        const boxWidth = 16;
 
-        // Draw dashboard background
-        room.visual.rect(dashX, dashY, boxWidth, 8, {
+        // Draw main dashboard background - increased height
+        room.visual.rect(dashX, dashY, boxWidth, 9, {  // Increased height
             fill: '#000000',
             opacity: 0.7,
             stroke: '#ffffff',
             strokeWidth: 0.05
         });
 
-        // Center text within smaller box
+        // Center text within box
         const textX = dashX + (boxWidth/2);
         
-        // RCL and Energy - Adjusted font sizes for smaller box
+        // Main stats with adjusted spacing
         room.visual.text(
             `🏰 RCL ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`,
-            textX, dashY + 0.8,
-            {align: 'center', color: '#ffff00', font: 0.7}  // Smaller font
+            textX, dashY + 1,  // Adjusted spacing
+            {align: 'center', color: '#ffff00', font: 0.7}
         );
 
         room.visual.text(
             `⚡ ${room.energyAvailable}/${room.energyCapacityAvailable}`,
-            textX, dashY + 2,
-            {align: 'center', color: '#ffaa00', font: 0.7}  // Smaller font
+            textX, dashY + 2.2,  // Adjusted spacing
+            {align: 'center', color: '#ffaa00', font: 0.7}
         );
 
-        // Creep counts - Adjusted for smaller box
+        // Creep counts
         const creeps = room.find(FIND_MY_CREEPS);
         const creepCounts = _.countBy(creeps, c => c.memory.role);
         room.visual.text(
             `👷 H:${creepCounts.harvester || 0}/4 U:${creepCounts.upgrader || 0}/2 B:${creepCounts.builder || 0}/3`,
-            textX, dashY + 3.2,
-            {align: 'center', color: '#ffffff', font: 0.7}  // Smaller font
+            textX, dashY + 3.4,  // Adjusted spacing
+            {align: 'center', color: '#ffffff', font: 0.7}
         );
 
-        // Construction progress header
+        // Construction progress
         room.visual.text(
             `🏗️ Construction Progress:`,
-            textX, dashY + 4.4,
+            textX, dashY + 4.6,
             {align: 'center', color: '#ffaa00', font: 0.7}
         );
 
-        // Progress bars with adjusted width
-        let lineOffset = 5.6;
+        // Progress bars
+        let lineOffset = 5.8;
         ['road', 'extension', 'container'].forEach(type => {
             const sites = room.find(FIND_CONSTRUCTION_SITES, {
                 filter: site => site.structureType === type
@@ -59,10 +60,44 @@ module.exports = {
             room.visual.text(
                 `${this.getTypeIcon(type)} ${type}: ${this.getProgressBar(percentage)} ${percentage}%`,
                 textX, dashY + lineOffset,
-                {align: 'center', color: '#ffffff', font: 0.6}  // Smaller font
+                {align: 'center', color: '#ffffff', font: 0.6}
             );
             lineOffset += 1.2;
         });
+
+        // Performance Metrics box - more compact and centered
+        const perfX = 35;
+        const perfY = 15;
+        const perfWidth = 14;  // Smaller width
+        
+        // Draw performance metrics background
+        room.visual.rect(perfX, perfY, perfWidth, 4, {
+            fill: '#000000',
+            opacity: 0.7,
+            stroke: '#ffffff',
+            strokeWidth: 0.05
+        });
+
+        // Center performance metrics text
+        const perfTextX = perfX + (perfWidth/2);
+        
+        room.visual.text(
+            `📊 Performance Metrics:`,
+            perfTextX, perfY + 0.8,
+            {align: 'center', color: '#00ff00', font: 0.7}
+        );
+
+        room.visual.text(
+            `Upgrade Rate: ${room.controller.progress}/tick`,
+            perfTextX, perfY + 1.8,
+            {align: 'center', color: '#ffffff', font: 0.6}
+        );
+
+        room.visual.text(
+            `CPU Efficiency: ${(Game.cpu.getUsed() * 100 / Game.cpu.limit).toFixed(1)}%`,
+            perfTextX, perfY + 2.8,
+            {align: 'center', color: '#ffffff', font: 0.6}
+        );
     },
 
     getTypeIcon: function(type) {
