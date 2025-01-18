@@ -1,12 +1,18 @@
 {
-  "name": "screeps-code",
+  "name": "screeps",
   "version": "1.0.0",
-  "description": "Screeps automation code",
+  "description": "Screeps scripts",
   "main": "main.js",
   "scripts": {
-    "watch": "node watch.js"
+    "start": "rollup -cw",
+    "build": "rollup -c",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "chokidar": "^3.5.3"
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^21.1.0",
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "rollup": "^2.79.2"
   }
 }

@@ -161,6 +161,7 @@ module.exports.loop = function() {
         spawnManager.run();
         visualManager.run(room);
         roadPlanner.run(room);
+        towerManager.run(room);
 
         room.visual.text(
             `Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,

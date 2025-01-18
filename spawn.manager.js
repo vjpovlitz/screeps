@@ -180,5 +180,12 @@ module.exports = {
                 {align: 'left', opacity: 0.8}
             );
         }
+    },
+
+    getHaulerBody: function(energy) {
+        if(energy >= 600) {
+            return [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+        }
+        return [CARRY, CARRY, CARRY, MOVE, MOVE];
     }
 }; 
