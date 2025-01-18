@@ -1,9 +1,8 @@
 module.exports = {
     run: function(room) {
-        // Run every 10 ticks
-        if(Game.time % 10 !== 0) return;
+        // Run EVERY tick instead of every 10
 
-        // Initialize memory structure
+        // Initialize memory structure if it doesn't exist
         if(!Memory.stats) {
             Memory.stats = {
                 gcl: {},
@@ -44,7 +43,7 @@ module.exports = {
             
             // Upgrade progress rate (per tick)
             upgradeRate: (room.memory.lastProgress) 
-                ? (room.controller.progress - room.memory.lastProgress) / 10
+                ? (room.controller.progress - room.memory.lastProgress)
                 : 0
         };
 
@@ -58,7 +57,7 @@ module.exports = {
             bucket: Game.cpu.bucket
         };
 
-        // Add to visual manager
+        // Always display metrics
         this.displayPerformanceMetrics(room);
     },
 

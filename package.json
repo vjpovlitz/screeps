@@ -4,8 +4,9 @@
   "description": "Screeps scripts",
   "main": "main.js",
   "scripts": {
-    "watch": "chokidar \"**/*.js\" -c \"git add . && git commit -m \\\"Auto-update Screeps code\\\" && git push\"",
-    "start": "npm run watch",
+    "clean": "if exist dist rd /s /q dist",
+    "watch": "chokidar \"*.js\" -i \"dist/**\" -c \"git add . && git commit -m \\\"Auto-update Screeps code\\\" && git push\"",
+    "start": "npm run clean && npm run watch",
     "push": "git add . && git commit -m \"Update Screeps code\" && git push"
   },
   "author": "",
