@@ -19,19 +19,40 @@ module.exports = {
     },
 
     run: function() {
-        // Force immediate name assignment to all unnamed creeps
+        // Force rename all unnamed creeps first
         for(let name in Game.creeps) {
             const creep = Game.creeps[name];
-            if(!this.namePool.includes(creep.name)) {
-                const newName = this.getNextName();
-                if(newName) {
-                    console.log(`Renaming creep ${creep.name} to ${newName}`);
-                    creep.memory.originalName = newName;
-                    // Note: actual renaming requires Game.creeps[name].rename(newName)
-                    // which costs game currency
+            // Check if creep has a generated name (contains numbers)
+            if(/\d/.test(creep.name) && !creep.memory.hasCustomName) {
+                const availableName = this.getNextName();
+                if(availableName) {
+                    console.log(`Assigning ${availableName} to creep ${creep.name}`);
+                    creep.memory.customName = availableName;
+                    creep.memory.hasCustomName = true;
+                    // Display custom name above creep
+                    creep.room.visual.text(
+                        availableName,
+                        creep.pos.x,
+                        creep.pos.y - 1,
+                        {align: 'center', opacity: 0.8}
+                    );
                 }
             }
         }
+
+        // Get currently used names
+        const usedNames = new Set();
+        for(let name in Game.creeps) {
+            const creep = Game.creeps[name];
+            if(creep.memory.customName) {
+                usedNames.add(creep.memory.customName);
+            }
+            if(this.namePool.includes(creep.name)) {
+                usedNames.add(creep.name);
+            }
+        }
+
+        console.log('Currently used names:', Array.from(usedNames));
 
         const spawn = Game.spawns['Spawn1'];
         if(spawn.spawning) {
@@ -94,22 +115,18 @@ module.exports = {
     },
 
     getNextName: function() {
-        // Get all currently used names (including memory.originalName)
-        const usedNames = new Set([
-            ...Object.values(Game.creeps).map(creep => creep.name),
-            ...Object.values(Game.creeps).map(creep => creep.memory.originalName)
-        ].filter(Boolean));
+        const usedNames = new Set();
+        for(let name in Game.creeps) {
+            const creep = Game.creeps[name];
+            if(creep.memory.customName) {
+                usedNames.add(creep.memory.customName);
+            }
+            if(this.namePool.includes(creep.name)) {
+                usedNames.add(creep.name);
+            }
+        }
 
-        // Debug log
-        console.log('Currently used names:', Array.from(usedNames));
-        
-        // Find first unused name from pool
-        const availableName = this.namePool.find(name => !usedNames.has(name));
-        
-        // Debug log
-        console.log('Next available name:', availableName);
-        
-        return availableName;
+        return this.namePool.find(name => !usedNames.has(name));
     },
 
     showSpawningVisual: function(spawn) {
