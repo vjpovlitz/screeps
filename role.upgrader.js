@@ -22,17 +22,9 @@ module.exports = {
                 }
             }
         } else {
-            const source = this.findClosestEnergySource(creep);
-            if(source) {
-                if(source instanceof Source) {
-                    if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                        movementHelper.moveOnRoad(creep, source);
-                    }
-                } else {
-                    if(creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                        movementHelper.moveOnRoad(creep, source);
-                    }
-                }
+            const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+            if(source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
+                movementHelper.moveOnRoad(creep, source);
             }
         }
     },

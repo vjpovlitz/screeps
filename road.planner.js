@@ -10,39 +10,44 @@ module.exports = {
         const sources = room.find(FIND_SOURCES);
         const controller = room.controller;
         
-        // Plan and build roads from spawn to each source
-        sources.forEach(source => {
-            this.planRoad(room, spawn.pos, source.pos, '#ffffff');
-        });
-
-        // Plan and build road to controller
-        if (controller) {
-            this.planRoad(room, spawn.pos, controller.pos, '#ffaa00');
+        // Check if Baltimore to Annapolis road exists
+        const baltimore = Game.flags.Baltimore;
+        const annapolis = spawn;
+        
+        if (baltimore && !this.roadExists(room, baltimore.pos, annapolis.pos)) {
+            this.planRoad(room, baltimore.pos, annapolis.pos, '#ffffff');
         }
 
-        // Plan roads between sources for efficiency
-        if (sources.length >= 2) {
-            this.planRoad(room, sources[0].pos, sources[1].pos, '#ffffff');
+        // Plan roads to other destinations if needed
+        sources.forEach(source => {
+            if (!this.roadExists(room, spawn.pos, source.pos)) {
+                this.planRoad(room, spawn.pos, source.pos, '#ffffff');
+            }
+        });
+
+        if (controller && !this.roadExists(room, spawn.pos, controller.pos)) {
+            this.planRoad(room, spawn.pos, controller.pos, '#ffaa00');
         }
     },
 
-    planRoad: function(room, fromPos, toPos, visualColor) {
-        // Find path, avoiding swamps when possible
+    roadExists: function(room, startPos, endPos) {
+        const path = room.findPath(startPos, endPos, {
+            ignoreCreeps: true
+        });
+
+        // Check if road exists along the path
+        return path.every(pos => {
+            const structures = room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y);
+            return structures.some(s => s.structureType === STRUCTURE_ROAD);
+        });
+    },
+
+    planRoad: function(room, fromPos, toPos, color) {
         const path = room.findPath(fromPos, toPos, {
             ignoreCreeps: true,
-            swampCost: 5,
-            plainCost: 2,
-            ignoreRoads: true,
+            swampCost: 2
         });
-
-        // Visualize the planned path
-        room.visual.poly(path.map(p => [p.x, p.y]), {
-            stroke: visualColor,
-            lineStyle: 'dashed',
-            opacity: 0.3
-        });
-
-        // Check for existing roads and construction sites
+        
         path.forEach(pos => {
             const structures = room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y);
             const constructionSites = room.lookForAt(LOOK_CONSTRUCTION_SITES, pos.x, pos.y);
@@ -55,11 +60,11 @@ module.exports = {
 
             // Create construction site if we have enough energy
             if (room.energyAvailable > room.energyCapacityAvailable * 0.5) {
-                const result = room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
-                if (result === OK) {
-                    console.log(`🛣️ Planned road at ${pos.x},${pos.y}`);
-                }
+                room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
             }
         });
+
+        // Visualize the path
+        room.visual.poly(path, {stroke: color, lineStyle: 'dashed'});
     }
 }; 
