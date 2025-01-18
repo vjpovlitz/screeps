@@ -48,33 +48,20 @@ module.exports = {
     },
 
     prioritizeConstructionSites: function(sites) {
-        const priority = {
-            'tower': 0,
-            'extension': 3,
-            'spawn': 4,
-            'road': 5,
-            'container': 6
-        };
-
-        // Debug output for available sites
-        if(Game.time % 10 === 0) {
-            console.log('🏗️ Available construction sites:');
-            sites.forEach(site => {
-                console.log(`- ${site.structureType} at (${site.pos.x},${site.pos.y}): ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
-            });
-        }
-
-        return sites.sort((a, b) => {
-            if(a.structureType === STRUCTURE_TOWER) return -1;
-            if(b.structureType === STRUCTURE_TOWER) return 1;
-            
-            const priorityDiff = (priority[a.structureType] || 99) - (priority[b.structureType] || 99);
-            if(priorityDiff !== 0) return priorityDiff;
-            
-            return (b.progress/b.progressTotal) - (a.progress/a.progressTotal);
-        });
+        // Simplified priority system
+        if(sites.length === 0) return [];
+        
+        // Find tower sites first
+        const towerSites = sites.filter(site => site.structureType === STRUCTURE_TOWER);
+        if(towerSites.length > 0) return towerSites;
+        
+        // Then extensions
+        const extensionSites = sites.filter(site => site.structureType === STRUCTURE_EXTENSION);
+        if(extensionSites.length > 0) return extensionSites;
+        
+        // Then everything else
+        return sites;
     },
-
 
     findRepairTarget: function(creep) {
         return creep.pos.findClosestByPath(FIND_STRUCTURES, {
