@@ -121,6 +121,40 @@ function enhancedVisuals(room) {
         );
     });
 
+    // Show Maryland town names for sources
+    room.find(FIND_SOURCES).forEach((source, index) => {
+        const townName = spawnManager.townNames.sources[index] || 'Unknown Town';
+        room.visual.text(
+            `📍 ${townName}`,
+            source.pos.x,
+            source.pos.y - 1.5,
+            {
+                color: '#ffffff',
+                backgroundColor: '#000000',
+                backgroundPadding: 0.2,
+                opacity: 0.8,
+                font: 0.6
+            }
+        );
+    });
+
+    // Show Annapolis for spawn
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if(spawn) {
+        room.visual.text(
+            `🏛️ ${spawnManager.townNames.spawn}`,
+            spawn.pos.x,
+            spawn.pos.y - 1,
+            {
+                color: '#ffffff',
+                backgroundColor: '#000000',
+                backgroundPadding: 0.2,
+                opacity: 0.8,
+                font: 0.6
+            }
+        );
+    }
+
     // Room status dashboard
     const dashboard = [
         `Room: ${room.name}`,
