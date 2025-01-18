@@ -296,4 +296,11 @@ module.exports.loop = function() {
             }
         }
     }
+
+    // Add storage near spawn
+    Game.rooms['YOUR_ROOM'].createConstructionSite(
+        Game.spawns['Spawn1'].pos.x + 2,
+        Game.spawns['Spawn1'].pos.y + 2,
+        STRUCTURE_STORAGE
+    );
 } 
