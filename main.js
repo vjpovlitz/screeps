@@ -9,6 +9,98 @@ const constructionPlanner = require('construction.planner');
 const visualManager = require('visual.manager');
 const roleBuilder = require('role.builder');
 
+// Restore your enhanced visuals function
+function enhancedVisuals(room) {
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if(spawn) {
+        // Show Annapolis
+        room.visual.text('🏛️ Annapolis',
+            spawn.pos.x, spawn.pos.y - 1,
+            {color: '#ffffff', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
+        );
+
+        // Show future tower location
+        room.visual.text('🗼 Future Tower',
+            spawn.pos.x + 2, spawn.pos.y + 1,
+            {color: '#ff0000', stroke: '#000000', strokeWidth: 0.2, font: 0.5}
+        );
+        
+        // Visualize tower range
+        room.visual.circle(spawn.pos.x + 2, spawn.pos.y + 2, {
+            radius: 5,
+            fill: 'transparent',
+            stroke: '#ff0000',
+            strokeWidth: 0.2,
+            opacity: 0.3
+        });
+    }
+
+    // Show Maryland city names at sources
+    const sources = room.find(FIND_SOURCES);
+    sources.forEach((source, index) => {
+        const name = index === 0 ? 'Frederick' : 'Baltimore';
+        room.visual.text(`⚡ ${name}`,
+            source.pos.x, source.pos.y - 1,
+            {color: '#ffaa00', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
+        );
+
+        // Show energy stats
+        room.visual.text(
+            `Energy: ${source.energy}/${source.energyCapacity}`,
+            source.pos.x, source.pos.y - 0.5,
+            {color: '#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.5}
+        );
+    });
+
+    // Show controller progress
+    if(room.controller) {
+        room.visual.text(
+            `RCL ${room.controller.level}: ${room.controller.progress}/${room.controller.progressTotal}`,
+            room.controller.pos.x, room.controller.pos.y - 1,
+            {color: '#33ff33', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
+        );
+    }
+
+    // Visualize roads and paths
+    visualizeRoads(room);
+}
+
+// Restore your road visualization
+function visualizeRoads(room) {
+    const spawn = room.find(FIND_MY_SPAWNS)[0];
+    if(!spawn) return;
+
+    const sources = room.find(FIND_SOURCES);
+    sources.forEach(source => {
+        const path = room.findPath(spawn.pos, source.pos, {
+            ignoreCreeps: true,
+            swampCost: 2,
+            plainCost: 2
+        });
+        
+        room.visual.poly(path.map(p => [p.x, p.y]), {
+            stroke: '#ffffff',
+            lineStyle: 'dashed',
+            opacity: 0.3
+        });
+    });
+
+    // Visualize path to controller
+    if(room.controller) {
+        const controllerPath = room.findPath(spawn.pos, room.controller.pos, {
+            ignoreCreeps: true,
+            swampCost: 2,
+            plainCost: 2
+        });
+        
+        room.visual.poly(controllerPath.map(p => [p.x, p.y]), {
+            stroke: '#ffaa00',
+            lineStyle: 'dashed',
+            opacity: 0.3
+        });
+    }
+}
+
 function showDetailedStatus() {
     // Cache commonly used values
     const cpu_start = Game.cpu.getUsed();
@@ -76,7 +168,6 @@ function showDetailedStatus() {
 }
 
 module.exports.loop = function() {
-    // Use CPU profiling
     const mainLoopStart = Game.cpu.getUsed();
 
     // Batch memory cleanup
@@ -88,30 +179,32 @@ module.exports.loop = function() {
         }
     }
 
-    // Cache room data
-    const rooms = Game.rooms;
-    for(let roomName in rooms) {
-        const room = rooms[roomName];
+    // Run room logic and visualizations
+    for(let roomName in Game.rooms) {
+        const room = Game.rooms[roomName];
         
-        // Run managers with CPU tracking
+        // Restore your enhanced visuals
+        enhancedVisuals(room);
+        
+        // Run managers
         const spawnCPUStart = Game.cpu.getUsed();
         spawnManager.run();
         const visualCPUStart = Game.cpu.getUsed();
         visualManager.run(room);
-        
-        if(Game.time % 30 === 0) {
-            console.log(`Manager CPU Usage:
-    Spawn: ${(visualCPUStart - spawnCPUStart).toFixed(2)}
-    Visual: ${(Game.cpu.getUsed() - visualCPUStart).toFixed(2)}`);
-        }
+
+        // Show room energy status
+        room.visual.text(
+            `Room Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
+            1, 1,
+            {align: 'left', opacity: 0.8}
+        );
     }
 
-    // Batch process creeps
+    // Run creep logic
     const creeps = Game.creeps;
     const creepCPUStart = Game.cpu.getUsed();
     for(let name in creeps) {
         const creep = creeps[name];
-        // Use switch for faster role checking
         switch(creep.memory.role) {
             case 'harvester':
                 roleHarvester.run(creep);
@@ -125,7 +218,7 @@ module.exports.loop = function() {
         }
     }
 
-    // Performance reporting
+    // Performance reporting every 30 ticks
     if(Game.time % 30 === 0) {
         showDetailedStatus();
         const totalCPU = Game.cpu.getUsed() - mainLoopStart;
