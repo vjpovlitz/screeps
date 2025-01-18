@@ -6,27 +6,31 @@ const roleHarvester = require('role.harvester');
 // const roleHarvester = require('/role.harvester');      // wrong
 
 module.exports = {
-    namePool: ['Vinson', 'Sean', 'Lenny', 'Cam', 'Kimi', 'Dave', 'Smokey'],
+    namePool: [
+        'Vinson', 'Sean', 'Lenny', 'Cam', 'Kimi', 'Dave', 'Smokey',
+        'Trish', 'Jocelyn', 'Trevor', 'Cat', 'Hellboy', 'Thor'
+    ],
     
     getNextName: function(role) {
-        // Get currently used names
-        const usedNames = new Set(Object.values(Game.creeps).map(creep => creep.name));
-        
-        // First, try to find an unused name from our pool
-        for (let name of this.namePool) {
-            if (!usedNames.has(name)) {
-                return name;
+        // Force clean up old memory entries
+        for(let name in Memory.creeps) {
+            if(!Game.creeps[name]) {
+                delete Memory.creeps[name];
             }
         }
         
-        // If all names are used, append a number to the first available name
-        for (let name of this.namePool) {
-            let counter = 1;
-            while (usedNames.has(`${name}_${counter}`)) {
-                counter++;
-            }
-            return `${name}_${counter}`;
+        // Get currently active creeps
+        const activeNames = new Set(Object.values(Game.creeps).map(creep => creep.name));
+        
+        // Find first unused name
+        const availableName = this.namePool.find(name => !activeNames.has(name));
+        if (availableName) {
+            console.log(`Assigning name: ${availableName}`);
+            return availableName;
         }
+        
+        // Fallback with numbered names
+        return `${role}${Game.time}`;
     },
 
     getOptimalBody: function(energyAvailable) {
@@ -84,11 +88,19 @@ module.exports = {
 
     spawnCreep: function(spawn, role, body) {
         const name = this.getNextName(role);
-        return spawn.spawnCreep(body, name, {
+        console.log(`Attempting to spawn ${role} with name: ${name}`); // Debug log
+        
+        const result = spawn.spawnCreep(body, name, {
             memory: {
                 role: role,
-                working: false
+                working: false,
+                originalName: name // Store original name
             }
         });
+        
+        if(result === OK) {
+            console.log(`Successfully spawned ${role} named ${name}`);
+        }
+        return result;
     }
 }; 
