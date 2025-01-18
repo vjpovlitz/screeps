@@ -52,15 +52,18 @@ module.exports = {
         else if(creepsByRole.upgrader.length < 2) roleToSpawn = 'upgrader';
         else if(creepsByRole.builder.length < 2) roleToSpawn = 'builder';
 
-        // Add mineral harvester check
+        // Check for mineral harvester - Fix the syntax error
+        const mineral = spawn.room.find(FIND_MINERALS)[0];
+        let extractor = null;
+        
+        if(mineral) {
+            extractor = mineral.pos.lookFor(LOOK_STRUCTURES).find(
+                s => s.structureType == STRUCTURE_EXTRACTOR
+            );
+        }
+
         const mineralHarvesters = _.filter(Game.creeps, 
             creep => creep.memory.role === 'mineralHarvester'
-        );
-
-        // Check if we have an extractor
-        const mineral = spawn.room.find(FIND_MINERALS)[0];
-        const extractor = mineral?.pos.lookFor(LOOK_STRUCTURES).find(
-            s => s.structureType == STRUCTURE_EXTRACTOR
         );
 
         if(extractor && mineralHarvesters.length < 1) {
