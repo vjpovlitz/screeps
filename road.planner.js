@@ -10,10 +10,11 @@ module.exports = {
         const sources = room.find(FIND_SOURCES);
         const controller = room.controller;
         
-        // Skip Baltimore to Annapolis road planning since it's complete
-        
-        // Plan roads to other destinations if needed
+        // Plan roads only to Frederick and controller
         sources.forEach(source => {
+            // Skip the Baltimore source (first source)
+            if (source === sources[0]) return;
+            
             if (!this.roadExists(room, spawn.pos, source.pos)) {
                 this.planRoad(room, spawn.pos, source.pos, '#ffffff');
             }
