@@ -255,4 +255,45 @@ module.exports.loop = function() {
     for(let roomName in Game.rooms) {
         enhancedVisuals(Game.rooms[roomName]);
     }
+
+    // Get the specific room
+    const room = Game.rooms['E58N36'];
+    if(room) {
+        // Find the mineral
+        const mineral = room.find(FIND_MINERALS)[0];
+        if(mineral) {
+            // Try to place extractor if none exists
+            const extractors = room.find(FIND_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_EXTRACTOR
+            });
+            
+            if(extractors.length === 0) {
+                console.log('Attempting to place extractor at:', mineral.pos.x, mineral.pos.y);
+                const result = room.createConstructionSite(
+                    mineral.pos.x, 
+                    mineral.pos.y, 
+                    STRUCTURE_EXTRACTOR
+                );
+                console.log('Extractor placement result:', result);
+            }
+        }
+
+        // Try to place storage near spawn
+        const spawn = Game.spawns['Spawn1'];
+        if(spawn) {
+            const storages = room.find(FIND_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_STORAGE
+            });
+            
+            if(storages.length === 0) {
+                console.log('Attempting to place storage near spawn');
+                const result = room.createConstructionSite(
+                    spawn.pos.x + 2,
+                    spawn.pos.y + 2,
+                    STRUCTURE_STORAGE
+                );
+                console.log('Storage placement result:', result);
+            }
+        }
+    }
 } 
