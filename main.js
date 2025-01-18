@@ -103,41 +103,44 @@ function visualizeRoads(room) {
 }
 
 function showDetailedStatus() {
+    // Only show creep names every 100 ticks instead of every 30
+    const showCreepDetails = Game.time % 100 === 0;
+    
     for(let roomName in Game.rooms) {
         const room = Game.rooms[roomName];
         const creeps = room.find(FIND_MY_CREEPS);
-        const structures = room.find(FIND_MY_STRUCTURES);
-        const sources = room.find(FIND_SOURCES);
+        const sites = room.find(FIND_CONSTRUCTION_SITES);
         
-        const creepsByRole = _.groupBy(creeps, c => c.memory.role);
-        const harvesters = creepsByRole['harvester'] || [];
-        const upgraders = creepsByRole['upgrader'] || [];
-        const builders = creepsByRole['builder'] || [];
-
         console.log(`\n=== Room ${roomName} Status ===`);
         
-        // Energy efficiency
-        const energyRatio = room.energyAvailable/room.energyCapacityAvailable;
-        console.log(`Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${Math.floor(energyRatio * 100)}%)`);
+        // Energy and Controller status
+        console.log(`Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${Math.floor((room.energyAvailable/room.energyCapacityAvailable) * 100)}%)`);
+        console.log(`Controller Level ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
         
-        // Controller progress
-        if(room.controller) {
-            console.log(`Controller Level ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
+        // Construction Progress
+        if(sites.length > 0) {
+            console.log('\nConstruction Progress:');
+            const sitesByType = _.groupBy(sites, 'structureType');
+            for(let type in sitesByType) {
+                const typeProgress = sitesByType[type].reduce((sum, site) => sum + site.progress, 0);
+                const typeTotal = sitesByType[type].reduce((sum, site) => sum + site.progressTotal, 0);
+                console.log(`${type}: ${Math.floor((typeProgress/typeTotal) * 100)}% (${sitesByType[type].length} sites)`);
+            }
         }
 
-        // Creep counts only
-        console.log(`Creeps: H:${harvesters.length}/4 U:${upgraders.length}/4 B:${builders.length}/2`);
-        
-        // Source status
-        sources.forEach((source, index) => {
-            const name = index === 0 ? 'Baltimore' : 'Frederick';
-            console.log(`${name}: ${source.energy}/${source.energyCapacity}`);
-        });
+        // Creep summary (always show)
+        const roles = _.groupBy(creeps, c => c.memory.role);
+        console.log('\nCreep Count:');
+        for(let role in roles) {
+            console.log(`${role}: ${roles[role].length}`);
+        }
 
-        // Construction sites
-        const sites = room.find(FIND_CONSTRUCTION_SITES);
-        if(sites.length > 0) {
-            console.log(`Building: ${sites.length} construction sites`);
+        // Detailed creep names (only every 100 ticks)
+        if(showCreepDetails) {
+            console.log('\nCreep Details:');
+            for(let role in roles) {
+                console.log(`${role}: ${roles[role].map(c => c.memory.customName).join(', ')}`);
+            }
         }
     }
 }

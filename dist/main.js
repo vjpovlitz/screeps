@@ -422,50 +422,45 @@ var role_builder = {
         // State management
         if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.building = false;
-            creep.say('🔄 harvest');
+            creep.say('🔄');
         }
         if(!creep.memory.building && creep.store.getFreeCapacity() == 0) {
             creep.memory.building = true;
-            creep.say('🚧 build');
+            creep.say('🚧');
         }
 
         if(creep.memory.building) {
-            // First priority: Roads under construction
-            const roadSites = creep.room.find(FIND_CONSTRUCTION_SITES, {
-                filter: site => site.structureType === STRUCTURE_ROAD
-            });
+            // Get all construction sites
+            const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
             
-            // Second priority: Other construction sites
-            const otherSites = creep.room.find(FIND_CONSTRUCTION_SITES, {
-                filter: site => site.structureType !== STRUCTURE_ROAD
-            });
-            
-            const target = roadSites.length > 0 ? roadSites[0] : 
-                          otherSites.length > 0 ? otherSites[0] : null;
+            if(sites.length) {
+                // Sort sites by priority and progress
+                const prioritizedSites = this.prioritizeConstructionSites(sites);
+                const target = prioritizedSites[0];
 
-            if(target) {
+                // Log construction progress every 50 ticks
+                if(Game.time % 50 === 0) {
+                    console.log(`🏗️ Building ${target.structureType}: ${Math.floor((target.progress/target.progressTotal) * 100)}% complete`);
+                }
+
                 if(creep.build(target) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, {
                         visualizePathStyle: {stroke: '#ffffff'}
                     });
                 }
             } else {
-                // No construction sites, repair roads instead
-                const damagedRoad = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: structure => structure.structureType === STRUCTURE_ROAD && 
-                                      structure.hits < structure.hitsMax
-                });
-                if(damagedRoad) {
-                    if(creep.repair(damagedRoad) == ERR_NOT_IN_RANGE) {
-                        creep.moveTo(damagedRoad, {
+                // Repair logic - prioritize roads and containers
+                const repairTarget = this.findRepairTarget(creep);
+                if(repairTarget) {
+                    if(creep.repair(repairTarget) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(repairTarget, {
                             visualizePathStyle: {stroke: '#ffffff'}
                         });
                     }
                 }
             }
-        }
-        else {
-            // Find closest source
+        } else {
+            // Harvesting logic
             const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
             if(source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(source, {
@@ -473,6 +468,43 @@ var role_builder = {
                 });
             }
         }
+    },
+
+    prioritizeConstructionSites: function(sites) {
+        // Priority order: Spawn > Extension > Tower > Storage > Road > Container
+        const priority = {
+            'spawn': 1,
+            'extension': 2,
+            'tower': 3,
+            'storage': 4,
+            'road': 5,
+            'container': 6
+        };
+
+        return sites.sort((a, b) => {
+            // First sort by priority
+            const priorityDiff = (priority[a.structureType] || 99) - (priority[b.structureType] || 99);
+            if(priorityDiff !== 0) return priorityDiff;
+            
+            // Then by progress percentage
+            const aProgress = a.progress / a.progressTotal;
+            const bProgress = b.progress / b.progressTotal;
+            return bProgress - aProgress; // Higher progress first
+        });
+    },
+
+    findRepairTarget: function(creep) {
+        return creep.pos.findClosestByPath(FIND_STRUCTURES, {
+            filter: structure => {
+                if(structure.structureType === STRUCTURE_ROAD) {
+                    return structure.hits < structure.hitsMax * 0.7;
+                }
+                if(structure.structureType === STRUCTURE_CONTAINER) {
+                    return structure.hits < structure.hitsMax * 0.8;
+                }
+                return false;
+            }
+        });
     }
 };
 
@@ -644,41 +676,44 @@ function visualizeRoads(room) {
 }
 
 function showDetailedStatus() {
+    // Only show creep names every 100 ticks instead of every 30
+    const showCreepDetails = Game.time % 100 === 0;
+    
     for(let roomName in Game.rooms) {
         const room = Game.rooms[roomName];
         const creeps = room.find(FIND_MY_CREEPS);
-        room.find(FIND_MY_STRUCTURES);
-        const sources = room.find(FIND_SOURCES);
+        const sites = room.find(FIND_CONSTRUCTION_SITES);
         
-        const creepsByRole = _.groupBy(creeps, c => c.memory.role);
-        const harvesters = creepsByRole['harvester'] || [];
-        const upgraders = creepsByRole['upgrader'] || [];
-        const builders = creepsByRole['builder'] || [];
-
         console.log(`\n=== Room ${roomName} Status ===`);
         
-        // Energy efficiency
-        const energyRatio = room.energyAvailable/room.energyCapacityAvailable;
-        console.log(`Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${Math.floor(energyRatio * 100)}%)`);
+        // Energy and Controller status
+        console.log(`Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${Math.floor((room.energyAvailable/room.energyCapacityAvailable) * 100)}%)`);
+        console.log(`Controller Level ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
         
-        // Controller progress
-        if(room.controller) {
-            console.log(`Controller Level ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
+        // Construction Progress
+        if(sites.length > 0) {
+            console.log('\nConstruction Progress:');
+            const sitesByType = _.groupBy(sites, 'structureType');
+            for(let type in sitesByType) {
+                const typeProgress = sitesByType[type].reduce((sum, site) => sum + site.progress, 0);
+                const typeTotal = sitesByType[type].reduce((sum, site) => sum + site.progressTotal, 0);
+                console.log(`${type}: ${Math.floor((typeProgress/typeTotal) * 100)}% (${sitesByType[type].length} sites)`);
+            }
         }
 
-        // Creep counts only
-        console.log(`Creeps: H:${harvesters.length}/4 U:${upgraders.length}/4 B:${builders.length}/2`);
-        
-        // Source status
-        sources.forEach((source, index) => {
-            const name = index === 0 ? 'Baltimore' : 'Frederick';
-            console.log(`${name}: ${source.energy}/${source.energyCapacity}`);
-        });
+        // Creep summary (always show)
+        const roles = _.groupBy(creeps, c => c.memory.role);
+        console.log('\nCreep Count:');
+        for(let role in roles) {
+            console.log(`${role}: ${roles[role].length}`);
+        }
 
-        // Construction sites
-        const sites = room.find(FIND_CONSTRUCTION_SITES);
-        if(sites.length > 0) {
-            console.log(`Building: ${sites.length} construction sites`);
+        // Detailed creep names (only every 100 ticks)
+        if(showCreepDetails) {
+            console.log('\nCreep Details:');
+            for(let role in roles) {
+                console.log(`${role}: ${roles[role].map(c => c.memory.customName).join(', ')}`);
+            }
         }
     }
 }
