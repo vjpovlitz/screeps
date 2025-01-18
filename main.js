@@ -103,80 +103,53 @@ function visualizeRoads(room) {
 }
 
 function showDetailedStatus() {
-    // Cache commonly used values
-    const cpu_start = Game.cpu.getUsed();
-    
     for(let roomName in Game.rooms) {
         const room = Game.rooms[roomName];
-        // Cache room finds to avoid repeated searches
         const creeps = room.find(FIND_MY_CREEPS);
         const structures = room.find(FIND_MY_STRUCTURES);
         const sources = room.find(FIND_SOURCES);
         
-        // Use cached creeps for filtering
         const creepsByRole = _.groupBy(creeps, c => c.memory.role);
         const harvesters = creepsByRole['harvester'] || [];
         const upgraders = creepsByRole['upgrader'] || [];
         const builders = creepsByRole['builder'] || [];
 
-        console.log(`\n=== Room ${roomName} Performance Report ===`);
+        console.log(`\n=== Room ${roomName} Status ===`);
         
         // Energy efficiency
         const energyRatio = room.energyAvailable/room.energyCapacityAvailable;
-        console.log(`\nEnergy Efficiency: ${Math.floor(energyRatio * 100)}%
-    Current: ${room.energyAvailable}
-    Capacity: ${room.energyCapacityAvailable}`);
+        console.log(`Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${Math.floor(energyRatio * 100)}%)`);
         
-        // Controller progress rate
-        if(Memory.rooms && 
-           Memory.rooms[roomName] && 
-           Memory.rooms[roomName].lastProgress) {
-            const progressRate = room.controller.progress - Memory.rooms[roomName].lastProgress;
-            console.log(`\nController Progress Rate: ${progressRate}/tick
-    Level: ${room.controller.level}
-    Progress: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
+        // Controller progress
+        if(room.controller) {
+            console.log(`Controller Level ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
         }
-        
-        // Initialize room memory if it doesn't exist
-        if(!Memory.rooms) Memory.rooms = {};
-        if(!Memory.rooms[roomName]) Memory.rooms[roomName] = {};
-        Memory.rooms[roomName].lastProgress = room.controller.progress;
 
-        // Creep efficiency
-        console.log(`\nCreep Efficiency:
-    Harvesters: ${harvesters.length} (Target: 4)
-    Upgraders: ${upgraders.length} (Target: 4)
-    Builders: ${builders.length} (Target: 2)`);
+        // Creep counts only
+        console.log(`Creeps: H:${harvesters.length}/4 U:${upgraders.length}/4 B:${builders.length}/2`);
         
-        // Source utilization
-        console.log('\nSource Utilization:');
+        // Source status
         sources.forEach((source, index) => {
-            const harvestersAtSource = _.filter(harvesters, 
-                h => h.memory.sourceId === source.id).length;
-            const efficiency = Math.min(harvestersAtSource * 2, 10) / 10; // 2 WORK parts per harvester
-            console.log(`    Source ${index + 1}: ${Math.floor(efficiency * 100)}% utilized
-    Energy: ${source.energy}/${source.energyCapacity}
-    Harvesters: ${harvestersAtSource}/3`);
+            const name = index === 0 ? 'Baltimore' : 'Frederick';
+            console.log(`${name}: ${source.energy}/${source.energyCapacity}`);
         });
 
-        // Performance metrics
-        const cpu_end = Game.cpu.getUsed();
-        console.log(`\nPerformance Metrics:
-    CPU Usage: ${(cpu_end - cpu_start).toFixed(2)} CPU
-    Creeps per CPU: ${(creeps.length / (cpu_end - cpu_start)).toFixed(2)}
-    Memory Usage: ${(RawMemory.get().length / 1024).toFixed(2)} KB`);
+        // Construction sites
+        const sites = room.find(FIND_CONSTRUCTION_SITES);
+        if(sites.length > 0) {
+            console.log(`Building: ${sites.length} construction sites`);
+        }
     }
 }
 
 module.exports.loop = function() {
     const mainLoopStart = Game.cpu.getUsed();
 
-    // Batch memory cleanup
+    // Batch memory cleanup (silently)
     if(Game.time % 100 === 0) {
         for(let name in Memory.creeps) {
             if(!Game.creeps[name]) {
                 delete Memory.creeps[name];
-                console.log('Clearing non-existing creep memory:', name);
             }
         }
     }
@@ -189,9 +162,8 @@ module.exports.loop = function() {
         visualManager.run(room);
         roadPlanner.run(room);
 
-        // Show room energy status
         room.visual.text(
-            `Room Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
+            `Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
             1, 1,
             {align: 'left', opacity: 0.8}
         );
@@ -219,6 +191,6 @@ module.exports.loop = function() {
     if(Game.time % 30 === 0) {
         showDetailedStatus();
         const totalCPU = Game.cpu.getUsed() - mainLoopStart;
-        console.log(`\nTotal CPU Usage: ${totalCPU.toFixed(2)} (${(totalCPU/Game.cpu.limit * 100).toFixed(2)}% of limit)`);
+        console.log(`CPU: ${totalCPU.toFixed(2)}/${Game.cpu.limit} (${(totalCPU/Game.cpu.limit * 100).toFixed(1)}%)`);
     }
 }; 
