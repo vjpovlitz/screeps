@@ -1,4 +1,4 @@
-// Import modules
+// Import all required modules
 const roleHarvester = require('role.harvester');
 const spawnManager = require('spawn.manager');
 const roleUpgrader = require('role.upgrader');
@@ -8,7 +8,6 @@ const towerManager = require('tower.manager');
 const constructionPlanner = require('construction.planner');
 
 function showStatus() {
-    // Energy status
     const room = Game.spawns['Spawn1'].room;
     console.log(`Room "${room.name}" status:
     Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}
@@ -198,14 +197,32 @@ module.exports.loop = function() {
         
         // Add persistent visualizations
         enhancedVisuals(room);
+        visualizeRoads(room);
         
         // Show room energy status
         room.visual.text(
             `Room Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
-            1,
-            1,
+            1, 1,
             {align: 'left', opacity: 0.8}
         );
+
+        // Add future tower visualization
+        if(room.controller.level < 3) {
+            const spawn = room.find(FIND_MY_SPAWNS)[0];
+            if(spawn) {
+                room.visual.text('🗼 Future Tower (RCL 3)',
+                    spawn.pos.x + 2, spawn.pos.y + 1,
+                    {color: '#ff0000', stroke: '#000000', strokeWidth: 0.2, font: 0.5}
+                );
+                room.visual.circle(spawn.pos.x + 2, spawn.pos.y + 2, {
+                    radius: 5,
+                    fill: 'transparent',
+                    stroke: '#ff0000',
+                    strokeWidth: 0.2,
+                    opacity: 0.3
+                });
+            }
+        }
     }
 
     // Run creep logic
@@ -224,11 +241,6 @@ module.exports.loop = function() {
         showStatus();
     }
 
-    // Visualize roads every tick
-    for(let roomName in Game.rooms) {
-        visualizeRoads(Game.rooms[roomName]);
-    }
-
     // Force road planning every 100 ticks
     if(Game.time % 100 === 0) {
         for(let roomName in Game.rooms) {
@@ -236,117 +248,8 @@ module.exports.loop = function() {
         }
     }
 
-    // Add road maintenance status
-    if(Game.time % 50 === 0) {
-        for(let roomName in Game.rooms) {
-            const roads = Game.rooms[roomName].find(FIND_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_ROAD
-            });
-            console.log(`Room ${roomName} has ${roads.length} roads. Average health: ${
-                Math.floor(roads.reduce((sum, road) => sum + (road.hits / road.hitsMax * 100), 0) / roads.length)
-            }%`);
-        }
-    }
-
     // Run energy management
     for(let roomName in Game.rooms) {
         energyManager.run(Game.rooms[roomName]);
     }
-
-    // Add enhanced visuals for each room
-    for(let roomName in Game.rooms) {
-        enhancedVisuals(Game.rooms[roomName]);
-    }
-
-    // Get your specific room
-    const room = Game.rooms['E58N36'];
-    if(room) {
-        // Restore city names and visuals
-        const spawn = Game.spawns['Spawn1'];
-        if(spawn) {
-            // Show Annapolis
-            room.visual.text('🏛️ Annapolis',
-                spawn.pos.x, spawn.pos.y - 1,
-                {color: '#ffffff', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
-            );
-
-            // Show future tower location
-            room.visual.text('🗼 Future Tower',
-                spawn.pos.x + 2, spawn.pos.y + 1,
-                {color: '#ff0000', stroke: '#000000', strokeWidth: 0.2, font: 0.5}
-            );
-            
-            // Visualize tower range
-            room.visual.circle(spawn.pos.x + 2, spawn.pos.y + 2, {
-                radius: 5,
-                fill: 'transparent',
-                stroke: '#ff0000',
-                strokeWidth: 0.2,
-                opacity: 0.3
-            });
-        }
-
-        // Show Frederick at energy source
-        const sources = room.find(FIND_SOURCES);
-        sources.forEach((source, index) => {
-            const name = index === 0 ? 'Frederick' : 'Baltimore';
-            room.visual.text(`⚡ ${name}`,
-                source.pos.x, source.pos.y - 1,
-                {color: '#ffaa00', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
-            );
-        });
-
-        // Show energy stats
-        sources.forEach(source => {
-            room.visual.text(
-                `Energy: ${source.energy}/${source.energyCapacity}`,
-                source.pos.x, source.pos.y - 0.5,
-                {color: '#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.5}
-            );
-        });
-
-        // Show controller progress
-        const controller = room.controller;
-        if(controller) {
-            room.visual.text(
-                `RCL ${controller.level}: ${controller.progress}/${controller.progressTotal}`,
-                controller.pos.x, controller.pos.y - 1,
-                {color: '#33ff33', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
-            );
-        }
-
-        // Show creep names and roles
-        for(let name in Game.creeps) {
-            const creep = Game.creeps[name];
-            if(creep.memory.customName) {
-                room.visual.text(
-                    creep.memory.customName,
-                    creep.pos.x, creep.pos.y - 0.5,
-                    {color: '#ffffff', stroke: '#000000', strokeWidth: 0.2, font: 0.5}
-                );
-            }
-        }
-
-        // Run tower and construction management
-        towerManager.run(room);
-        constructionPlanner.run(room);
-    }
-
-    // Run spawn manager with name checks
-    const spawnManager = require('spawn.manager');
-    spawnManager.run();
-
-    // Run creep roles
-    for(let name in Game.creeps) {
-        const creep = Game.creeps[name];
-        if(creep.memory.role == 'harvester') {
-            require('role.harvester').run(creep);
-        }
-        if(creep.memory.role == 'upgrader') {
-            require('role.upgrader').run(creep);
-        }
-        if(creep.memory.role == 'builder') {
-            require('role.builder').run(creep);
-        }
-    }
-} 
+}; 
