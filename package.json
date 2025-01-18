@@ -1,0 +1,12 @@
+{
+  "name": "screeps-code",
+  "version": "1.0.0",
+  "description": "Screeps automation code",
+  "main": "main.js",
+  "scripts": {
+    "watch": "node watch.js"
+  },
+  "dependencies": {
+    "chokidar": "^3.5.3"
+  }
+}
