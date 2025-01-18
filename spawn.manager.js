@@ -19,89 +19,94 @@ module.exports = {
     },
 
     run: function() {
-        // Force rename all unnamed creeps first
+        // Clear memory of dead creeps
+        for(let name in Memory.creeps) {
+            if(!Game.creeps[name]) {
+                delete Memory.creeps[name];
+            }
+        }
+
+        const spawn = Game.spawns['Spawn1'];
+        if(!spawn) return;
+
+        // Get current creep counts
+        const harvesters = _.filter(Game.creeps, creep => creep.memory.role === 'harvester');
+        const upgraders = _.filter(Game.creeps, creep => creep.memory.role === 'upgrader');
+        const builders = _.filter(Game.creeps, creep => creep.memory.role === 'builder');
+
+        // Assign names to unnamed creeps
         for(let name in Game.creeps) {
             const creep = Game.creeps[name];
-            // Check if creep has a generated name (contains numbers)
-            if(/\d/.test(creep.name) && !creep.memory.hasCustomName) {
-                const availableName = this.getNextName();
-                if(availableName) {
-                    console.log(`Assigning ${availableName} to creep ${creep.name}`);
-                    creep.memory.customName = availableName;
-                    creep.memory.hasCustomName = true;
-                    // Display custom name above creep
-                    creep.room.visual.text(
-                        availableName,
-                        creep.pos.x,
-                        creep.pos.y - 1,
-                        {align: 'center', opacity: 0.8}
-                    );
+            if(!creep.memory.customName) {
+                const newName = this.getNextName();
+                if(newName) {
+                    creep.memory.customName = newName;
+                    console.log(`Assigned name ${newName} to ${creep.name}`);
                 }
             }
         }
 
-        // Get currently used names
-        const usedNames = new Set();
-        for(let name in Game.creeps) {
-            const creep = Game.creeps[name];
-            if(creep.memory.customName) {
-                usedNames.add(creep.memory.customName);
-            }
-            if(this.namePool.includes(creep.name)) {
-                usedNames.add(creep.name);
-            }
-        }
-
-        console.log('Currently used names:', Array.from(usedNames));
-
-        const spawn = Game.spawns['Spawn1'];
+        // Don't spawn if already spawning
         if(spawn.spawning) {
             this.showSpawningVisual(spawn);
             return;
         }
 
-        // Get current creep counts and available names
-        const creepsByRole = {
-            harvester: _.filter(Game.creeps, creep => creep.memory.role === 'harvester'),
-            upgrader: _.filter(Game.creeps, creep => creep.memory.role === 'upgrader'),
-            builder: _.filter(Game.creeps, creep => creep.memory.role === 'builder')
-        };
-
-        // Adjust minimum counts to favor upgraders
-        const minCreeps = {
-            harvester: 4,
-            upgrader: 4,  // Increased upgrader count
-            builder: 1
-        };
-
-        // Spawn priority system
-        if(creepsByRole.harvester.length < minCreeps.harvester) {
-            this.spawnCreep(spawn, 'harvester', this.getOptimalBody(spawn.room.energyAvailable));
-        }
-        else if(creepsByRole.upgrader.length < minCreeps.upgrader) {
-            // Use specialized upgrader body
-            this.spawnCreep(spawn, 'upgrader', this.getUpgraderBody(spawn.room.energyAvailable));
-        }
-        else if(creepsByRole.builder.length < minCreeps.builder) {
-            this.spawnCreep(spawn, 'builder', this.getOptimalBody(spawn.room.energyAvailable));
-        }
-
-        // Check for mineral harvester - Fix the syntax error
-        const mineral = spawn.room.find(FIND_MINERALS)[0];
-        let extractor = null;
+        const energyAvailable = spawn.room.energyAvailable;
         
-        if(mineral) {
-            extractor = mineral.pos.lookFor(LOOK_STRUCTURES).find(
-                s => s.structureType == STRUCTURE_EXTRACTOR
-            );
+        // Determine what to spawn
+        let result = OK;
+        if(harvesters.length < 4) {
+            const newName = this.getNextName();
+            if(newName) {
+                result = spawn.spawnCreep(
+                    this.getOptimalBody(energyAvailable),
+                    newName,
+                    {
+                        memory: {
+                            role: 'harvester',
+                            working: false,
+                            customName: newName
+                        }
+                    }
+                );
+            }
+        }
+        else if(upgraders.length < 4) {
+            const newName = this.getNextName();
+            if(newName) {
+                result = spawn.spawnCreep(
+                    this.getUpgraderBody(energyAvailable),
+                    newName,
+                    {
+                        memory: {
+                            role: 'upgrader',
+                            working: false,
+                            customName: newName
+                        }
+                    }
+                );
+            }
+        }
+        else if(builders.length < 2) {
+            const newName = this.getNextName();
+            if(newName) {
+                result = spawn.spawnCreep(
+                    this.getOptimalBody(energyAvailable),
+                    newName,
+                    {
+                        memory: {
+                            role: 'builder',
+                            working: false,
+                            customName: newName
+                        }
+                    }
+                );
+            }
         }
 
-        const mineralHarvesters = _.filter(Game.creeps, 
-            creep => creep.memory.role === 'mineralHarvester'
-        );
-
-        if(extractor && mineralHarvesters.length < 1) {
-            this.spawnCreep(spawn, 'mineralHarvester', this.getOptimalMineralBody(spawn.room.energyAvailable));
+        if(result === OK) {
+            console.log(`Successfully spawned creep with name: ${newName}`);
         }
     },
 
@@ -112,64 +117,38 @@ module.exports = {
             if(creep.memory.customName) {
                 usedNames.add(creep.memory.customName);
             }
-            if(this.namePool.includes(creep.name)) {
-                usedNames.add(creep.name);
-            }
         }
-
+        
         return this.namePool.find(name => !usedNames.has(name));
     },
 
-    showSpawningVisual: function(spawn) {
-        const spawningCreep = Game.creeps[spawn.spawning.name];
-        spawn.room.visual.text(
-            '🛠️' + spawningCreep.memory.role,
-            spawn.pos.x + 1, 
-            spawn.pos.y, 
-            {align: 'left', opacity: 0.8}
-        );
-    },
-
     getOptimalBody: function(energy) {
-        // Enhanced body configurations
-        if(energy >= 1200) {
-            return [
-                WORK, WORK, WORK, WORK, WORK,    // 500
-                CARRY, CARRY, CARRY, CARRY,      // 200
-                MOVE, MOVE, MOVE, MOVE, MOVE     // 500
-            ];
-        } else if(energy >= 800) {
-            return [
-                WORK, WORK, WORK, WORK,          // 400
-                CARRY, CARRY, CARRY,             // 150
-                MOVE, MOVE, MOVE, MOVE           // 250
-            ];
-        }
-        return [WORK, WORK, CARRY, CARRY, MOVE, MOVE]; // Basic 400 energy build
-    },
-
-    getOptimalMineralBody: function(energy) {
         if(energy >= 800) {
-            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+            return [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+        } else if(energy >= 550) {
+            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
         }
-        return [WORK, WORK, CARRY, MOVE, MOVE];
+        return [WORK, WORK, CARRY, MOVE];
     },
 
     getUpgraderBody: function(energy) {
-        // Specialized upgrader bodies
         if(energy >= 800) {
-            return [
-                WORK, WORK, WORK, WORK,  // More WORK parts = faster upgrading
-                CARRY, CARRY,
-                MOVE, MOVE, MOVE
-            ];
+            return [WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
         } else if(energy >= 550) {
-            return [
-                WORK, WORK, WORK,
-                CARRY, CARRY,
-                MOVE, MOVE, MOVE
-            ];
+            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
         }
         return [WORK, WORK, CARRY, MOVE];
+    },
+
+    showSpawningVisual: function(spawn) {
+        if(spawn.spawning) {
+            const spawningCreep = Game.creeps[spawn.spawning.name];
+            spawn.room.visual.text(
+                '🛠️ ' + spawningCreep.memory.role,
+                spawn.pos.x + 1,
+                spawn.pos.y,
+                {align: 'left', opacity: 0.8}
+            );
+        }
     }
 }; 
