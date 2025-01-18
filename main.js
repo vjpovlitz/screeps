@@ -40,25 +40,24 @@ function visualizeRoads(room) {
     });
 }
 
-function visualizeCreeps(room) {
-    // Visualize each creep's status and name
+function enhancedVisuals(room) {
+    // Clear previous visuals
+    room.visual.clear();
+    
+    // Show all creeps and their status
     for(let name in Game.creeps) {
         const creep = Game.creeps[name];
         
-        // Create a colored circle under the creep based on role
-        const roleColors = {
-            'harvester': '#ffaa00',
-            'upgrader': '#00ffaa'
-        };
-
-        // Draw circle under creep
+        // Creep circle and name
         room.visual.circle(creep.pos, {
-            radius: 0.45,
-            fill: roleColors[creep.memory.role] || '#ffffff',
+            radius: 0.55,
+            fill: creep.memory.role == 'harvester' ? '#ffaa00' :
+                  creep.memory.role == 'upgrader' ? '#00ffaa' :
+                  '#ffffff',
             opacity: 0.2
         });
 
-        // Draw name above creep
+        // Creep name with background for better visibility
         room.visual.text(
             creep.name,
             creep.pos.x,
@@ -66,52 +65,83 @@ function visualizeCreeps(room) {
             {
                 color: '#ffffff',
                 font: 0.5,
-                stroke: '#000000',
-                strokeWidth: 0.05,
+                backgroundColor: '#000000',
+                backgroundPadding: 0.2,
                 opacity: 0.8
             }
         );
 
-        // Show current action
-        let actionIcon = '⚡'; // default
-        if(creep.memory.delivering) actionIcon = '📦';
-        if(creep.memory.upgrading) actionIcon = '⚡';
+        // Role icon
+        const roleIcon = creep.memory.role == 'harvester' ? '⚡' :
+                        creep.memory.role == 'upgrader' ? '🔄' :
+                        creep.memory.role == 'builder' ? '🏗️' : '❓';
         
         room.visual.text(
-            actionIcon,
+            roleIcon,
             creep.pos.x,
             creep.pos.y + 0.25,
             {font: 0.5}
         );
-
-        // Draw path to target if moving
-        if(creep.memory._move) {
-            const path = Room.deserializePath(creep.memory._move.path);
-            room.visual.poly(path.map(p => [p.x, p.y]), {
-                stroke: roleColors[creep.memory.role],
-                opacity: 0.2,
-                lineStyle: 'dashed'
-            });
-        }
     }
 
-    // Show energy sources info
+    // Energy source information
     room.find(FIND_SOURCES).forEach(source => {
         const harvestersHere = _.filter(Game.creeps, c => 
             c.memory.sourceId === source.id
         ).length;
         
-        room.visual.text(
-            `Energy: ${source.energy}\nHarvesters: ${harvestersHere}`,
-            source.pos.x,
+        // Energy bar
+        const energyPercent = source.energy / source.energyCapacity;
+        room.visual.rect(
+            source.pos.x - 0.5,
             source.pos.y - 1,
+            1,
+            0.1,
+            {fill: '#555555'}
+        );
+        room.visual.rect(
+            source.pos.x - 0.5,
+            source.pos.y - 1,
+            energyPercent,
+            0.1,
+            {fill: '#ffaa00'}
+        );
+
+        // Source stats
+        room.visual.text(
+            `⚡ ${source.energy}/${source.energyCapacity}\n👥 ${harvestersHere}`,
+            source.pos.x,
+            source.pos.y - 1.2,
             {
                 align: 'center',
-                opacity: 0.7,
-                color: '#ffff00'
+                opacity: 0.8,
+                backgroundColor: '#000000',
+                backgroundPadding: 0.2
             }
         );
     });
+
+    // Room status dashboard
+    const dashboard = [
+        `Room: ${room.name}`,
+        `Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
+        `Creeps: ${Object.keys(Game.creeps).length}`,
+        `Harvesters: ${_.filter(Game.creeps, c => c.memory.role == 'harvester').length}`,
+        `Upgraders: ${_.filter(Game.creeps, c => c.memory.role == 'upgrader').length}`,
+        `Builders: ${_.filter(Game.creeps, c => c.memory.role == 'builder').length}`
+    ].join('\n');
+
+    room.visual.text(
+        dashboard,
+        1,
+        1,
+        {
+            align: 'left',
+            opacity: 0.8,
+            backgroundColor: '#000000',
+            backgroundPadding: 0.2
+        }
+    );
 }
 
 module.exports.loop = function() {
@@ -131,7 +161,7 @@ module.exports.loop = function() {
         const room = Game.rooms[roomName];
         
         // Add persistent visualizations
-        visualizeCreeps(room);
+        enhancedVisuals(room);
         
         // Show room energy status
         room.visual.text(
@@ -185,5 +215,10 @@ module.exports.loop = function() {
     // Run energy management
     for(let roomName in Game.rooms) {
         energyManager.run(Game.rooms[roomName]);
+    }
+
+    // Add enhanced visuals for each room
+    for(let roomName in Game.rooms) {
+        enhancedVisuals(Game.rooms[roomName]);
     }
 } 
