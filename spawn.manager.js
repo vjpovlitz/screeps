@@ -52,6 +52,22 @@ module.exports = {
         else if(creepsByRole.upgrader.length < 2) roleToSpawn = 'upgrader';
         else if(creepsByRole.builder.length < 2) roleToSpawn = 'builder';
 
+        // Add mineral harvester check
+        const mineralHarvesters = _.filter(Game.creeps, 
+            creep => creep.memory.role === 'mineralHarvester'
+        );
+
+        // Check if we have an extractor
+        const mineral = spawn.room.find(FIND_MINERALS)[0];
+        const extractor = mineral?.pos.lookFor(LOOK_STRUCTURES).find(
+            s => s.structureType == STRUCTURE_EXTRACTOR
+        );
+
+        if(extractor && mineralHarvesters.length < 1) {
+            roleToSpawn = 'mineralHarvester';
+            bodyParts = this.getOptimalMineralBody(spawn.room.energyAvailable);
+        }
+
         if(roleToSpawn && spawn.room.energyAvailable >= 200) {
             const newName = this.getNextName();
             if(newName) {
@@ -112,5 +128,12 @@ module.exports = {
             return [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
         }
         return [WORK, CARRY, MOVE];
+    },
+
+    getOptimalMineralBody: function(energy) {
+        if(energy >= 800) {
+            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+        }
+        return [WORK, WORK, CARRY, MOVE, MOVE];
     }
 }; 
