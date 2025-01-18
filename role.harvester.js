@@ -5,11 +5,11 @@ module.exports = {
     /** @param {Creep} creep **/
     run: function(creep) {
         // State management
-        if(creep.memory.delivering && creep.store[RESOURCE_ENERGY] == 0) {
+        if(creep.memory.delivering && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.delivering = false;
             creep.say('🔄 harvest');
         }
-        if(!creep.memory.delivering && creep.store.getFreeCapacity() == 0) {
+        if(!creep.memory.delivering && creep.store.getFreeCapacity() === 0) {
             creep.memory.delivering = true;
             creep.say('📦 deliver');
         }
@@ -50,40 +50,50 @@ module.exports = {
             }
         }
 
-        if(!creep.memory.delivering) {
-            const source = Game.getObjectById(creep.memory.sourceId);
-            if(source) {
-                if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                    movementHelper.moveOnRoad(creep, source);
-                }
-            }
-        } else {
+        if(creep.memory.delivering) {
             // Prioritized delivery targets
             const targets = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    return (structure.structureType == STRUCTURE_SPAWN ||
-                            structure.structureType == STRUCTURE_EXTENSION) &&
-                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    if(structure.structureType === STRUCTURE_SPAWN ||
+                       structure.structureType === STRUCTURE_EXTENSION) {
+                        return structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    }
+                    // Add tower as delivery target
+                    if(structure.structureType === STRUCTURE_TOWER) {
+                        return structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    }
+                    return false;
                 }
             });
 
-            // Sort targets by priority and distance
-            targets.sort((a, b) => {
-                const distA = creep.pos.findPathTo(a).length;
-                const distB = creep.pos.findPathTo(b).length;
-                
-                // Prioritize spawns when energy is low
-                if(a.structureType === STRUCTURE_SPAWN && 
-                   a.store.getFreeCapacity(RESOURCE_ENERGY) > 0) return -1;
-                if(b.structureType === STRUCTURE_SPAWN && 
-                   b.store.getFreeCapacity(RESOURCE_ENERGY) > 0) return 1;
-                
-                return distA - distB; // Otherwise, prefer closer targets
-            });
-
             if(targets.length > 0) {
-                if(creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    movementHelper.moveOnRoad(creep, targets[0]);
+                // Sort by priority: Spawn > Extensions > Tower
+                targets.sort((a, b) => {
+                    if(a.structureType === STRUCTURE_SPAWN) return -1;
+                    if(b.structureType === STRUCTURE_SPAWN) return 1;
+                    if(a.structureType === STRUCTURE_EXTENSION) return -1;
+                    if(b.structureType === STRUCTURE_EXTENSION) return 1;
+                    return 0;
+                });
+
+                if(creep.transfer(targets[0], RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
+                }
+            } else {
+                // If no delivery targets, become a temporary builder
+                const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
+                if(sites.length > 0) {
+                    if(creep.build(sites[0]) === ERR_NOT_IN_RANGE) {
+                        creep.moveTo(sites[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+                    }
+                }
+            }
+        } else {
+            // Harvesting logic remains the same
+            const source = Game.getObjectById(creep.memory.sourceId);
+            if(source) {
+                if(creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
                 }
             }
         }

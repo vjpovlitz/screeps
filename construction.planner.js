@@ -35,9 +35,10 @@ module.exports = {
 
     MARYLAND_LANDMARKS: {
         towers: [
-            { name: "Fort McHenry", pos: {x: 2, y: 2} },          // South tower by spawn
-            { name: "Fort Washington", pos: {x: 3, y: -12} },     // North tower by source
-            { name: "Fort Meade", pos: {x: -8, y: -4} }          // West tower for coverage
+            { name: "Fort McHenry", pos: {x: 2, y: 2} },       // South tower by spawn
+            { name: "Fort Baltimore", pos: {x: -8, y: -6} },    // North tower protecting Baltimore
+            { name: "Fort Meade", pos: {x: -4, y: 4} },        // West tower for defense
+            { name: "Fort Washington", pos: {x: 6, y: -2} }     // East tower for coverage
         ],
         extensions: [
             "Fairhaven", "North Beach", "Deale", "Shady Side", 
@@ -145,52 +146,48 @@ module.exports = {
     },
 
     planTowers: function(room, spawn) {
-        // Simplified tower planning - focus on first tower
-        const firstTower = this.MARYLAND_LANDMARKS.towers[0];
-        const towerPos = {
-            x: spawn.pos.x + firstTower.pos.x,
-            y: spawn.pos.y + firstTower.pos.y
-        };
+        if(room.controller.level >= 3) {
+            // Try to build all possible towers
+            this.MARYLAND_LANDMARKS.towers.forEach(tower => {
+                const towerPos = {
+                    x: spawn.pos.x + tower.pos.x,
+                    y: spawn.pos.y + tower.pos.y
+                };
 
-        // Check for existing roads or other structures
-        const existingStructures = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y);
-        const existingSites = room.lookForAt(LOOK_CONSTRUCTION_SITES, towerPos.x, towerPos.y);
-        
-        if(existingStructures.length > 0) {
-            console.log(`❌ Cannot build tower - structure exists at (${towerPos.x},${towerPos.y}): ${existingStructures[0].structureType}`);
-            
-            // If there's a road, destroy it to make way for the tower
-            const road = existingStructures.find(s => s.structureType === STRUCTURE_ROAD);
-            if(road) {
-                console.log(`🚧 Removing road to make way for tower`);
-                road.destroy();
-            }
-            return;
-        }
+                // Check existing towers at this position
+                const existingTower = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y)
+                    .find(s => s.structureType === STRUCTURE_TOWER);
+                
+                if(!existingTower) {
+                    // Clear any roads or other structures
+                    const structures = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y);
+                    structures.forEach(structure => {
+                        if(structure.structureType === STRUCTURE_ROAD) {
+                            structure.destroy();
+                        }
+                    });
 
-        if(existingSites.length === 0 && this.isValidBuildPosition(room, towerPos)) {
-            const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
-            if(result === OK) {
-                console.log(`🏗️ Tower construction site created at (${towerPos.x},${towerPos.y})`);
-                
-                // Visualize the planned tower
-                room.visual.structure(towerPos.x, towerPos.y, STRUCTURE_TOWER, {
-                    opacity: 0.5,
-                    stroke: '#ff0000',
-                    strokeWidth: 0.2
-                });
-                
-                // Show tower range
-                room.visual.circle(towerPos.x, towerPos.y, {
-                    radius: 5,
-                    fill: 'transparent',
-                    stroke: '#ff0000',
-                    strokeWidth: 0.2,
-                    opacity: 0.3
-                });
-            } else {
-                console.log(`❌ Failed to create tower construction site. Error: ${result}`);
-            }
+                    // Create the tower construction site
+                    const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+                    if(result === OK) {
+                        console.log(`🏗️ Planning tower ${tower.name} at (${towerPos.x},${towerPos.y})`);
+                        
+                        // Visualize planned tower
+                        room.visual.structure(towerPos.x, towerPos.y, STRUCTURE_TOWER, {
+                            opacity: 0.5,
+                            stroke: '#ff0000'
+                        });
+                        
+                        // Show coverage
+                        room.visual.circle(towerPos.x, towerPos.y, {
+                            radius: 5,
+                            fill: 'transparent',
+                            stroke: '#ff0000',
+                            opacity: 0.3
+                        });
+                    }
+                }
+            });
         }
     },
 

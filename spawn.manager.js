@@ -37,8 +37,8 @@ module.exports = {
         // Adjusted minimum counts
         const minCreeps = {
             harvester: 4,
-            upgrader: 2,  // Reduced from 4 to 2
-            builder: 3    // Increased from 2 to 3
+            upgrader: 2,
+            builder: 6  // Increased for multiple tower construction
         };
 
         // Debug output every 30 ticks
@@ -180,5 +180,14 @@ module.exports = {
             return [CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
         }
         return [CARRY, CARRY, CARRY, MOVE, MOVE];
+    },
+
+    spawnExtraBuilders: function(room, constructionSites, currentBuilders) {
+        // Spawn more builders if we have lots of construction
+        if(constructionSites.length > 5 && currentBuilders < 8 && 
+           room.energyAvailable >= room.energyCapacityAvailable * 0.8) {
+            return true;
+        }
+        return false;
     }
 }; 

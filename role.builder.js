@@ -13,34 +13,44 @@ module.exports = {
         }
 
         if(creep.memory.building) {
-            // First, look specifically for tower construction sites
             const towerSites = creep.room.find(FIND_CONSTRUCTION_SITES, {
                 filter: site => site.structureType === STRUCTURE_TOWER
             });
             
             if(towerSites.length > 0) {
-                if(creep.build(towerSites[0]) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(towerSites[0], {visualizePathStyle: {stroke: '#ff0000'}});
+                const target = towerSites[0];
+                if(creep.build(target) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, {
+                        visualizePathStyle: {stroke: '#ff0000'},
+                        reusePath: 5
+                    });
                 }
-                creep.say('🗼 tower');
+                creep.say('🗼 tower!');
                 return;
             }
 
-            // If no tower sites, look for other construction sites
             const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
             if(sites.length > 0) {
                 if(creep.build(sites[0]) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(sites[0], {visualizePathStyle: {stroke: '#ffffff'}});
+                    creep.moveTo(sites[0], {
+                        visualizePathStyle: {stroke: '#ffffff'},
+                        reusePath: 5
+                    });
                 }
             }
         } else {
-            // Get energy from closest source
-            const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-            if(source) {
-                if(creep.harvest(source) === ERR_NOT_IN_RANGE) {
+            const storage = creep.room.storage;
+            if(storage && storage.store[RESOURCE_ENERGY] > 0) {
+                if(creep.withdraw(storage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(storage, {visualizePathStyle: {stroke: '#ffaa00'}});
+                }
+            } else {
+                const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+                if(source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
                 }
             }
         }
     }
+}; 
 }; 
