@@ -35,10 +35,10 @@ function enhancedVisuals(room) {
         });
     }
 
-    // Show Maryland city names at sources
+    // Show Maryland city names at sources - Baltimore and Frederick swapped
     const sources = room.find(FIND_SOURCES);
     sources.forEach((source, index) => {
-        const name = index === 0 ? 'Frederick' : 'Baltimore';
+        const name = index === 0 ? 'Baltimore' : 'Frederick';  // Swapped the names here
         room.visual.text(`⚡ ${name}`,
             source.pos.x, source.pos.y - 1,
             {color: '#ffaa00', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
@@ -175,6 +175,7 @@ module.exports.loop = function() {
         for(let name in Memory.creeps) {
             if(!Game.creeps[name]) {
                 delete Memory.creeps[name];
+                console.log('Clearing non-existing creep memory:', name);
             }
         }
     }
@@ -182,14 +183,8 @@ module.exports.loop = function() {
     // Run room logic and visualizations
     for(let roomName in Game.rooms) {
         const room = Game.rooms[roomName];
-        
-        // Restore your enhanced visuals
         enhancedVisuals(room);
-        
-        // Run managers
-        const spawnCPUStart = Game.cpu.getUsed();
         spawnManager.run();
-        const visualCPUStart = Game.cpu.getUsed();
         visualManager.run(room);
 
         // Show room energy status
@@ -222,7 +217,6 @@ module.exports.loop = function() {
     if(Game.time % 30 === 0) {
         showDetailedStatus();
         const totalCPU = Game.cpu.getUsed() - mainLoopStart;
-        console.log(`\nTotal CPU Usage: ${totalCPU.toFixed(2)} (${(totalCPU/Game.cpu.limit * 100).toFixed(2)}% of limit)
-Creep CPU: ${(Game.cpu.getUsed() - creepCPUStart).toFixed(2)}`);
+        console.log(`\nTotal CPU Usage: ${totalCPU.toFixed(2)} (${(totalCPU/Game.cpu.limit * 100).toFixed(2)}% of limit)`);
     }
 }; 
