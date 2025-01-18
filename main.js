@@ -2,6 +2,7 @@
 const roleHarvester = require('role.harvester');
 const spawnManager = require('spawn.manager');
 const roleUpgrader = require('role.upgrader');
+const constructionManager = require('construction.manager');
 
 function showStatus() {
     // Energy status
@@ -38,5 +39,24 @@ module.exports.loop = function() {
     // Run status report every 10 ticks
     if(Game.time % 10 === 0) {
         showStatus();
+    }
+
+    // Plan roads every 1000 ticks
+    if(Game.time % 1000 === 0) {
+        for(let roomName in Game.rooms) {
+            constructionManager.planRoads(Game.rooms[roomName]);
+        }
+    }
+
+    // Add road maintenance status
+    if(Game.time % 50 === 0) {
+        for(let roomName in Game.rooms) {
+            const roads = Game.rooms[roomName].find(FIND_STRUCTURES, {
+                filter: s => s.structureType === STRUCTURE_ROAD
+            });
+            console.log(`Room ${roomName} has ${roads.length} roads. Average health: ${
+                Math.floor(roads.reduce((sum, road) => sum + (road.hits / road.hitsMax * 100), 0) / roads.length)
+            }%`);
+        }
     }
 } 
