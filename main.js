@@ -314,4 +314,44 @@ module.exports.loop = function() {
         Game.spawns['Spawn1'].pos.y + 2,
         STRUCTURE_STORAGE
     );
+
+    // Check if we need to build extensions
+    if(room) {
+        // Plan extensions in a pattern
+        const spawn = Game.spawns['Spawn1'];
+        if(spawn) {
+            const extensions = room.find(FIND_MY_STRUCTURES, {
+                filter: { structureType: STRUCTURE_EXTENSION }
+            });
+            
+            if(extensions.length < room.controller.level * 5) { // Max extensions per RCL
+                // Create construction sites for new extensions
+                const positions = [
+                    {x: spawn.pos.x + 2, y: spawn.pos.y},
+                    {x: spawn.pos.x - 2, y: spawn.pos.y},
+                    {x: spawn.pos.x, y: spawn.pos.y + 2},
+                    {x: spawn.pos.x, y: spawn.pos.y - 2}
+                ];
+                
+                for(let pos of positions) {
+                    if(room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y).length == 0) {
+                        room.createConstructionSite(pos.x, pos.y, STRUCTURE_EXTENSION);
+                    }
+                }
+            }
+        }
+
+        // Plan tower placement
+        const towers = room.find(FIND_MY_STRUCTURES, {
+            filter: { structureType: STRUCTURE_TOWER }
+        });
+        
+        if(towers.length < 1 && room.controller.level >= 3) {
+            room.createConstructionSite(
+                spawn.pos.x + 3,
+                spawn.pos.y + 3,
+                STRUCTURE_TOWER
+            );
+        }
+    }
 } 
