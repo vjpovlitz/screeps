@@ -4,6 +4,8 @@ const spawnManager = require('spawn.manager');
 const roleUpgrader = require('role.upgrader');
 const constructionManager = require('construction.manager');
 const energyManager = require('energy.manager');
+const towerManager = require('tower.manager');
+const constructionPlanner = require('construction.planner');
 
 function showStatus() {
     // Energy status
@@ -259,99 +261,92 @@ module.exports.loop = function() {
     // Get your specific room
     const room = Game.rooms['E58N36'];
     if(room) {
-        // Find the hydrogen mineral at position 24, 13
-        const mineral = room.lookForAt(LOOK_MINERALS, 24, 13)[0];
-        if(mineral) {
-            // Check for existing extractor
-            const extractorSites = room.lookForAt(LOOK_CONSTRUCTION_SITES, 24, 13)
-                .filter(site => site.structureType === STRUCTURE_EXTRACTOR);
-            const extractors = room.lookForAt(LOOK_STRUCTURES, 24, 13)
-                .filter(structure => structure.structureType === STRUCTURE_EXTRACTOR);
-
-            if(extractors.length === 0 && extractorSites.length === 0) {
-                console.log('Placing extractor at hydrogen deposit (24, 13)');
-                const result = room.createConstructionSite(24, 13, STRUCTURE_EXTRACTOR);
-                console.log('Extractor placement result:', result);
-            }
-        }
-
-        // Place storage near spawn
+        // Restore city names and visuals
         const spawn = Game.spawns['Spawn1'];
         if(spawn) {
-            const storages = room.find(FIND_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_STORAGE
-            });
+            // Show Annapolis
+            room.visual.text('🏛️ Annapolis',
+                spawn.pos.x, spawn.pos.y - 1,
+                {color: '#ffffff', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
+            );
+
+            // Show future tower location
+            room.visual.text('🗼 Future Tower',
+                spawn.pos.x + 2, spawn.pos.y + 1,
+                {color: '#ff0000', stroke: '#000000', strokeWidth: 0.2, font: 0.5}
+            );
             
-            if(storages.length === 0) {
-                const storagePos = {
-                    x: spawn.pos.x + 2,
-                    y: spawn.pos.y + 2
-                };
-                
-                if(room.lookForAt(LOOK_STRUCTURES, storagePos.x, storagePos.y).length === 0) {
-                    console.log('Placing storage near Annapolis');
-                    const result = room.createConstructionSite(
-                        storagePos.x,
-                        storagePos.y,
-                        STRUCTURE_STORAGE
-                    );
-                    console.log('Storage placement result:', result);
-                }
+            // Visualize tower range
+            room.visual.circle(spawn.pos.x + 2, spawn.pos.y + 2, {
+                radius: 5,
+                fill: 'transparent',
+                stroke: '#ff0000',
+                strokeWidth: 0.2,
+                opacity: 0.3
+            });
+        }
+
+        // Show Frederick at energy source
+        const sources = room.find(FIND_SOURCES);
+        sources.forEach((source, index) => {
+            const name = index === 0 ? 'Frederick' : 'Baltimore';
+            room.visual.text(`⚡ ${name}`,
+                source.pos.x, source.pos.y - 1,
+                {color: '#ffaa00', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
+            );
+        });
+
+        // Show energy stats
+        sources.forEach(source => {
+            room.visual.text(
+                `Energy: ${source.energy}/${source.energyCapacity}`,
+                source.pos.x, source.pos.y - 0.5,
+                {color: '#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.5}
+            );
+        });
+
+        // Show controller progress
+        const controller = room.controller;
+        if(controller) {
+            room.visual.text(
+                `RCL ${controller.level}: ${controller.progress}/${controller.progressTotal}`,
+                controller.pos.x, controller.pos.y - 1,
+                {color: '#33ff33', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
+            );
+        }
+
+        // Show creep names and roles
+        for(let name in Game.creeps) {
+            const creep = Game.creeps[name];
+            if(creep.memory.customName) {
+                room.visual.text(
+                    creep.memory.customName,
+                    creep.pos.x, creep.pos.y - 0.5,
+                    {color: '#ffffff', stroke: '#000000', strokeWidth: 0.2, font: 0.5}
+                );
             }
         }
 
-        // Visualize planned structures using correct visual methods
-        room.visual.circle(24, 13, {radius: 0.5, fill: '#ff0000', opacity: 0.3});
-        if(spawn) {
-            room.visual.circle(spawn.pos.x + 2, spawn.pos.y + 2, 
-                {radius: 0.5, fill: '#00ff00', opacity: 0.3});
-        }
+        // Run tower and construction management
+        towerManager.run(room);
+        constructionPlanner.run(room);
     }
 
-    // Add storage near spawn
-    Game.rooms['YOUR_ROOM'].createConstructionSite(
-        Game.spawns['Spawn1'].pos.x + 2,
-        Game.spawns['Spawn1'].pos.y + 2,
-        STRUCTURE_STORAGE
-    );
+    // Run spawn manager with name checks
+    const spawnManager = require('spawn.manager');
+    spawnManager.run();
 
-    // Check if we need to build extensions
-    if(room) {
-        // Plan extensions in a pattern
-        const spawn = Game.spawns['Spawn1'];
-        if(spawn) {
-            const extensions = room.find(FIND_MY_STRUCTURES, {
-                filter: { structureType: STRUCTURE_EXTENSION }
-            });
-            
-            if(extensions.length < room.controller.level * 5) { // Max extensions per RCL
-                // Create construction sites for new extensions
-                const positions = [
-                    {x: spawn.pos.x + 2, y: spawn.pos.y},
-                    {x: spawn.pos.x - 2, y: spawn.pos.y},
-                    {x: spawn.pos.x, y: spawn.pos.y + 2},
-                    {x: spawn.pos.x, y: spawn.pos.y - 2}
-                ];
-                
-                for(let pos of positions) {
-                    if(room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y).length == 0) {
-                        room.createConstructionSite(pos.x, pos.y, STRUCTURE_EXTENSION);
-                    }
-                }
-            }
+    // Run creep roles
+    for(let name in Game.creeps) {
+        const creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            require('role.harvester').run(creep);
         }
-
-        // Plan tower placement
-        const towers = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_TOWER }
-        });
-        
-        if(towers.length < 1 && room.controller.level >= 3) {
-            room.createConstructionSite(
-                spawn.pos.x + 3,
-                spawn.pos.y + 3,
-                STRUCTURE_TOWER
-            );
+        if(creep.memory.role == 'upgrader') {
+            require('role.upgrader').run(creep);
+        }
+        if(creep.memory.role == 'builder') {
+            require('role.builder').run(creep);
         }
     }
 } 
