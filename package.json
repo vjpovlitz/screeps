@@ -4,7 +4,7 @@
   "description": "Screeps scripts",
   "main": "main.js",
   "scripts": {
-    "watch": "chokidar \"*.js\" -c \"git add . && git commit -m 'Auto-update Screeps code' && git push\"",
+    "watch": "chokidar \"**/*.js\" -c \"git add . && git commit -m \\\"Auto-update Screeps code\\\" && git push\"",
     "start": "npm run watch",
     "push": "git add . && git commit -m \"Update Screeps code\" && git push"
   },

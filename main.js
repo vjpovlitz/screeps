@@ -9,6 +9,7 @@ const constructionPlanner = require('construction.planner');
 const visualManager = require('visual.manager');
 const roleBuilder = require('role.builder');
 const roadPlanner = require('road.planner');
+const performanceMonitor = require('performance.monitor');
 
 // Restore your enhanced visuals function
 function enhancedVisuals(room) {
@@ -181,6 +182,7 @@ module.exports.loop = function() {
         visualManager.run(room);
         roadPlanner.run(room);
         towerManager.run(room);
+        performanceMonitor.run(room);
 
         room.visual.text(
             `Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
