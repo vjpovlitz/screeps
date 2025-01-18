@@ -6,8 +6,21 @@ const roleHarvester = require('role.harvester');
 // const roleHarvester = require('/role.harvester');      // wrong
 
 module.exports = {
+    namePool: ['Vinson', 'Sean', 'Lenny', 'Cam', 'Kimi', 'Dave', 'Smokey'],
+    
+    getNextName: function(role) {
+        // Get all existing creep names
+        const existingNames = Object.values(Game.creeps).map(creep => creep.name);
+        
+        // Find first available name from pool
+        const availableName = this.namePool.find(name => !existingNames.includes(name));
+        
+        // If all pool names are taken, use timestamp naming
+        return availableName || `${role}${Game.time}`;
+    },
+
     run: function() {
-        // Clear memory of dead creeps first
+        // Clear memory of dead creeps
         for(let name in Memory.creeps) {
             if(!Game.creeps[name]) {
                 delete Memory.creeps[name];
@@ -18,22 +31,22 @@ module.exports = {
         const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
         const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
         
-        console.log('Harvesters: ' + harvesters.length); // Debug log
+        console.log('Harvesters: ' + harvesters.length);
         
-        // Check if we can spawn
         const spawn = Game.spawns['Spawn1'];
-        
-        // Define basic body parts
         const bodyParts = [WORK, CARRY, MOVE];
-        const energyCost = 200; // 100 + 50 + 50 for WORK + CARRY + MOVE
+        const energyCost = 200;
 
-        // Try to spawn more harvesters first
+        // Spawn harvesters with custom names
         if(harvesters.length < 4) {
             if(spawn.room.energyAvailable >= energyCost) {
-                const newName = 'Harvester' + Game.time;
-                console.log('Attempting to spawn harvester: ' + newName); // Debug log
+                const newName = this.getNextName('Harvester');
+                console.log('Attempting to spawn harvester: ' + newName);
                 const result = spawn.spawnCreep(bodyParts, newName, 
-                    {memory: {role: 'harvester'}});
+                    {memory: {
+                        role: 'harvester',
+                        isNamed: true
+                    }});
                 
                 if(result == OK) {
                     console.log('Successfully spawning new harvester: ' + newName);
@@ -44,11 +57,14 @@ module.exports = {
                 console.log('Waiting for energy: ' + spawn.room.energyAvailable + '/' + energyCost);
             }
         }
-        // Then try upgraders
+        // Spawn upgraders with custom names
         else if(upgraders.length < 2 && spawn.room.energyAvailable >= energyCost) {
-            const newName = 'Upgrader' + Game.time;
+            const newName = this.getNextName('Upgrader');
             spawn.spawnCreep(bodyParts, newName,
-                {memory: {role: 'upgrader'}});
+                {memory: {
+                    role: 'upgrader',
+                    isNamed: true
+                }});
         }
 
         // Visual notification when spawning
