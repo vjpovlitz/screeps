@@ -67,11 +67,24 @@ module.exports = {
             builder: _.filter(Game.creeps, creep => creep.memory.role === 'builder')
         };
 
-        // Determine what to spawn
-        let roleToSpawn = null;
-        if(creepsByRole.harvester.length < 4) roleToSpawn = 'harvester';
-        else if(creepsByRole.upgrader.length < 2) roleToSpawn = 'upgrader';
-        else if(creepsByRole.builder.length < 2) roleToSpawn = 'builder';
+        // Adjust minimum counts to favor upgraders
+        const minCreeps = {
+            harvester: 4,
+            upgrader: 4,  // Increased upgrader count
+            builder: 1
+        };
+
+        // Spawn priority system
+        if(creepsByRole.harvester.length < minCreeps.harvester) {
+            this.spawnCreep(spawn, 'harvester', this.getOptimalBody(spawn.room.energyAvailable));
+        }
+        else if(creepsByRole.upgrader.length < minCreeps.upgrader) {
+            // Use specialized upgrader body
+            this.spawnCreep(spawn, 'upgrader', this.getUpgraderBody(spawn.room.energyAvailable));
+        }
+        else if(creepsByRole.builder.length < minCreeps.builder) {
+            this.spawnCreep(spawn, 'builder', this.getOptimalBody(spawn.room.energyAvailable));
+        }
 
         // Check for mineral harvester - Fix the syntax error
         const mineral = spawn.room.find(FIND_MINERALS)[0];
@@ -88,29 +101,7 @@ module.exports = {
         );
 
         if(extractor && mineralHarvesters.length < 1) {
-            roleToSpawn = 'mineralHarvester';
-            bodyParts = this.getOptimalMineralBody(spawn.room.energyAvailable);
-        }
-
-        if(roleToSpawn && spawn.room.energyAvailable >= 200) {
-            const newName = this.getNextName();
-            if(newName) {
-                const bodyParts = this.getOptimalBody(spawn.room.energyAvailable);
-                console.log(`Spawning new ${roleToSpawn} with name: ${newName}`);
-                
-                const result = spawn.spawnCreep(bodyParts, newName, {
-                    memory: {
-                        role: roleToSpawn,
-                        working: false,
-                        homeBase: this.townNames.spawn,
-                        originalName: newName
-                    }
-                });
-
-                if(result === OK) {
-                    console.log(`Successfully spawned ${newName}`);
-                }
-            }
+            this.spawnCreep(spawn, 'mineralHarvester', this.getOptimalMineralBody(spawn.room.energyAvailable));
         }
     },
 
@@ -162,5 +153,23 @@ module.exports = {
             return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
         }
         return [WORK, WORK, CARRY, MOVE, MOVE];
+    },
+
+    getUpgraderBody: function(energy) {
+        // Specialized upgrader bodies
+        if(energy >= 800) {
+            return [
+                WORK, WORK, WORK, WORK,  // More WORK parts = faster upgrading
+                CARRY, CARRY,
+                MOVE, MOVE, MOVE
+            ];
+        } else if(energy >= 550) {
+            return [
+                WORK, WORK, WORK,
+                CARRY, CARRY,
+                MOVE, MOVE, MOVE
+            ];
+        }
+        return [WORK, WORK, CARRY, MOVE];
     }
 }; 
