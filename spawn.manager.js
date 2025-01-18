@@ -26,44 +26,38 @@ module.exports = {
                 const creep = Game.creeps[name];
                 console.log(`${creep.name}: Custom Name = ${creep.memory.customName || 'None'}, Role = ${creep.memory.role}`);
             }
-            console.log('=== Available Names ===');
-            console.log(this.getAvailableNames().join(', '));
-        }
-
-        // Clear memory of dead creeps
-        for(let name in Memory.creeps) {
-            if(!Game.creeps[name]) {
-                delete Memory.creeps[name];
-                console.log('Clearing dead creep memory:', name);
-            }
         }
 
         const spawn = Game.spawns['Spawn1'];
         if(!spawn) return;
 
-        // Get current creep counts
-        const harvesters = _.filter(Game.creeps, creep => creep.memory.role === 'harvester');
-        const upgraders = _.filter(Game.creeps, creep => creep.memory.role === 'upgrader');
-        const builders = _.filter(Game.creeps, creep => creep.memory.role === 'builder');
-
-        // Force name assignment for unnamed creeps
+        // IMPORTANT: Force rename ALL creeps, including harvesters
         for(let name in Game.creeps) {
             const creep = Game.creeps[name];
-            if(!creep.memory.customName || creep.memory.customName === 'undefined') {
+            // Check if creep has no custom name OR has a generated name (contains numbers)
+            if(!creep.memory.customName || /\d/.test(creep.name)) {
                 const availableName = this.getNextName();
                 if(availableName) {
+                    // Store old name for logging
+                    const oldName = creep.memory.customName || creep.name;
                     creep.memory.customName = availableName;
-                    console.log(`🏷️ Assigned name ${availableName} to ${creep.name}`);
-                    // Visualize the name assignment
+                    console.log(`🏷️ Renamed creep from ${oldName} to ${availableName} (Role: ${creep.memory.role})`);
+                    
+                    // Visual feedback for rename
                     creep.room.visual.text(
                         `${availableName}`,
                         creep.pos.x,
                         creep.pos.y - 0.5,
-                        {align: 'center', opacity: 0.8}
+                        {align: 'center', opacity: 0.8, color: '#ffffff', stroke: '#000000', strokeWidth: 0.2}
                     );
                 }
             }
         }
+
+        // Get current creep counts
+        const harvesters = _.filter(Game.creeps, creep => creep.memory.role === 'harvester');
+        const upgraders = _.filter(Game.creeps, creep => creep.memory.role === 'upgrader');
+        const builders = _.filter(Game.creeps, creep => creep.memory.role === 'builder');
 
         // Don't spawn if already spawning
         if(spawn.spawning) {
@@ -74,8 +68,8 @@ module.exports = {
         const energyAvailable = spawn.room.energyAvailable;
         let spawnAttempted = false;
         let spawnedName = '';
-        
-        // Determine what to spawn
+
+        // IMPORTANT: Modified spawning logic to ensure names are assigned
         if(harvesters.length < 4) {
             const newName = this.getNextName();
             if(newName) {
@@ -83,17 +77,17 @@ module.exports = {
                 spawnedName = newName;
                 const result = spawn.spawnCreep(
                     this.getOptimalBody(energyAvailable),
-                    newName,
+                    `harvester_${Game.time}`, // Temporary name that will be replaced
                     {
                         memory: {
                             role: 'harvester',
                             working: false,
-                            customName: newName
+                            customName: newName // Assign custom name immediately
                         }
                     }
                 );
                 if(result === OK) {
-                    console.log(`Spawning new harvester: ${newName}`);
+                    console.log(`Spawning new harvester with custom name: ${newName}`);
                 }
             }
         }
@@ -141,7 +135,7 @@ module.exports = {
         }
 
         if(spawnAttempted) {
-            console.log(`Spawn attempt with name: ${spawnedName}`);
+            console.log(`Spawn attempt completed with name: ${spawnedName}`);
         }
     },
 
@@ -158,24 +152,25 @@ module.exports = {
 
     getNextName: function() {
         const usedNames = new Set();
+        // Check both memory.customName and actual creep names
         for(let name in Game.creeps) {
             const creep = Game.creeps[name];
             if(creep.memory.customName) {
                 usedNames.add(creep.memory.customName);
             }
+            // Also check if the creep's actual name is from our pool
+            if(this.namePool.includes(creep.name)) {
+                usedNames.add(creep.name);
+            }
         }
         
-        // Debug output for name selection
-        const availableName = this.namePool.find(name => !usedNames.has(name));
-        if(availableName) {
-            console.log(`Found available name: ${availableName}`);
-            console.log(`Currently used names: ${Array.from(usedNames).join(', ')}`);
-        } else {
-            console.log('No available names found!');
-            console.log(`All names in use: ${Array.from(usedNames).join(', ')}`);
+        // Debug output
+        if(Game.time % 15 === 0) {
+            console.log('Used names:', Array.from(usedNames).join(', '));
+            console.log('Available names:', this.namePool.filter(name => !usedNames.has(name)).join(', '));
         }
         
-        return availableName;
+        return this.namePool.find(name => !usedNames.has(name));
     },
 
     getOptimalBody: function(energy) {
