@@ -49,29 +49,25 @@ module.exports = {
 
     prioritizeConstructionSites: function(sites) {
         const priority = {
-            'tower': 0,      // Highest priority
-            'road': 1,       // Roads are important for tower coverage
-            'rampart': 2,    // Defense
+            'tower': 0,
             'extension': 3,
             'spawn': 4,
-            'container': 5
+            'road': 5,
+            'container': 6
         };
 
         return sites.sort((a, b) => {
-            // Towers get absolute priority
+            // Give absolute priority to towers
             if(a.structureType === STRUCTURE_TOWER) return -1;
             if(b.structureType === STRUCTURE_TOWER) return 1;
-
-            // Then sort by priority and progress
+            
             const priorityDiff = (priority[a.structureType] || 99) - (priority[b.structureType] || 99);
             if(priorityDiff !== 0) return priorityDiff;
             
-            // Prioritize nearly complete structures
-            const aProgress = a.progress / a.progressTotal;
-            const bProgress = b.progress / b.progressTotal;
-            return bProgress - aProgress;
+            return (b.progress/b.progressTotal) - (a.progress/a.progressTotal);
         });
     },
+
 
     findRepairTarget: function(creep) {
         return creep.pos.findClosestByPath(FIND_STRUCTURES, {

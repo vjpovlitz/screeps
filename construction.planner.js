@@ -145,23 +145,31 @@ module.exports = {
             const towers = room.find(FIND_MY_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_TOWER
             });
-
-            // Plan towers based on RCL and existing towers
-            const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][room.controller.level];
             
-            // Prioritize tower construction sites
-            this.MARYLAND_LANDMARKS.towers.forEach((tower, index) => {
-                if(index < maxTowers) {
-                    const towerPos = {
-                        x: spawn.pos.x + tower.pos.x,
-                        y: spawn.pos.y + tower.pos.y
-                    };
+            const constructionSites = room.find(FIND_CONSTRUCTION_SITES, {
+                filter: s => s.structureType === STRUCTURE_TOWER
+            });
 
-                    if(this.isValidBuildPosition(room, towerPos)) {
-                        room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+            // Only proceed if we have no towers and no tower construction sites
+            if(towers.length === 0 && constructionSites.length === 0) {
+                // Force first tower position
+                const firstTowerPos = {
+                    x: spawn.pos.x + this.MARYLAND_LANDMARKS.towers[0].pos.x,
+                    y: spawn.pos.y + this.MARYLAND_LANDMARKS.towers[0].pos.y
+                };
+
+                if(this.isValidBuildPosition(room, firstTowerPos)) {
+                    const result = room.createConstructionSite(
+                        firstTowerPos.x, 
+                        firstTowerPos.y, 
+                        STRUCTURE_TOWER
+                    );
+                    
+                    if(result === OK) {
+                        console.log('🏗️ Prioritizing tower construction at', firstTowerPos.x, firstTowerPos.y);
                     }
                 }
-            });
+            }
         }
     },
 
