@@ -95,24 +95,25 @@ module.exports = {
     },
 
     run: function(room) {
-        // Only run every 100 ticks to save CPU
-        if (Game.time % 100 !== 0) return;
+        // Run more frequently when no towers exist
+        const towers = room.find(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_TOWER
+        });
+        
+        if (towers.length === 0 && Game.time % 10 === 0) {  // Run every 10 ticks if no towers
+            const spawn = room.find(FIND_MY_SPAWNS)[0];
+            if(!spawn) return;
 
-        const spawn = room.find(FIND_MY_SPAWNS)[0];
-        if(!spawn) return;
-
-        // Plan extensions first
-        this.planExtensions(room, spawn);
-        
-        // Plan towers to protect the extensions
-        this.planTowers(room, spawn);
-        
-        // Plan containers and roads
-        this.planContainers(room);
-        this.planExtensionRoads(room, spawn);
-        
-        // Add visualization
-        this.visualizeLandmarks(room);
+            // Force tower planning first
+            this.planTowers(room, spawn);
+            
+            // Then do other planning
+            this.planExtensions(room, spawn);
+            this.planContainers(room);
+            this.planExtensionRoads(room, spawn);
+            
+            this.visualizeLandmarks(room);
+        }
     },
 
     planContainers: function(room, spawn) {
@@ -146,29 +147,21 @@ module.exports = {
                 filter: s => s.structureType === STRUCTURE_TOWER
             });
             
-            const constructionSites = room.find(FIND_CONSTRUCTION_SITES, {
-                filter: s => s.structureType === STRUCTURE_TOWER
-            });
-
-            // Only proceed if we have no towers and no tower construction sites
-            if(towers.length === 0 && constructionSites.length === 0) {
-                // Force first tower position
+            // Force first tower construction
+            if(towers.length === 0) {
                 const firstTowerPos = {
                     x: spawn.pos.x + this.MARYLAND_LANDMARKS.towers[0].pos.x,
                     y: spawn.pos.y + this.MARYLAND_LANDMARKS.towers[0].pos.y
                 };
 
-                if(this.isValidBuildPosition(room, firstTowerPos)) {
-                    const result = room.createConstructionSite(
-                        firstTowerPos.x, 
-                        firstTowerPos.y, 
-                        STRUCTURE_TOWER
-                    );
-                    
-                    if(result === OK) {
-                        console.log('🏗️ Prioritizing tower construction at', firstTowerPos.x, firstTowerPos.y);
-                    }
-                }
+                // Create the construction site and log the attempt
+                const result = room.createConstructionSite(
+                    firstTowerPos.x, 
+                    firstTowerPos.y, 
+                    STRUCTURE_TOWER
+                );
+                
+                console.log(`🏗️ Attempting tower construction at (${firstTowerPos.x},${firstTowerPos.y}). Result: ${result}`);
             }
         }
     },

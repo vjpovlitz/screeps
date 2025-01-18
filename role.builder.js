@@ -56,8 +56,15 @@ module.exports = {
             'container': 6
         };
 
+        // Debug output for available sites
+        if(Game.time % 10 === 0) {
+            console.log('🏗️ Available construction sites:');
+            sites.forEach(site => {
+                console.log(`- ${site.structureType} at (${site.pos.x},${site.pos.y}): ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
+            });
+        }
+
         return sites.sort((a, b) => {
-            // Give absolute priority to towers
             if(a.structureType === STRUCTURE_TOWER) return -1;
             if(b.structureType === STRUCTURE_TOWER) return 1;
             
