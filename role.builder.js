@@ -19,23 +19,28 @@ module.exports = {
             });
             
             if(towerSites.length > 0) {
-                // Find closest tower site
-                const target = towerSites[0]; // Will be Fort McHenry due to priority planning
+                // Assign to Fort McHenry if available
+                const target = towerSites[0];  // Will be Fort McHenry due to priority
+                creep.memory.targetId = target.id;  // Track assignment
+                
                 if(creep.build(target) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, {
                         visualizePathStyle: {stroke: '#ff0000'},
                         reusePath: 5
                     });
                 }
-                // Update status visualization
+                
+                // Visual feedback
+                const towerName = getTowerName(target.pos, creep.room.find(FIND_MY_SPAWNS)[0].pos);
                 creep.room.visual.text(
-                    `🏗️ Building ${target.structureType}`,
+                    `🏗️ Building ${towerName}`,
                     creep.pos.x, creep.pos.y - 1,
                     {color: '#ffaa00', stroke: '#000000', strokeWidth: 0.2, font: 0.4}
                 );
                 return;
             }
-
+            
+            delete creep.memory.targetId;  // Clear assignment if no tower work
             // Second priority: Other structures
             const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
             if(sites.length > 0) {

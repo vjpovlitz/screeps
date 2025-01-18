@@ -108,20 +108,41 @@ function showDetailedStatus() {
     
     for(let roomName in Game.rooms) {
         const room = Game.rooms[roomName];
-        const creeps = room.find(FIND_MY_CREEPS);
-        const sites = room.find(FIND_CONSTRUCTION_SITES);
-        const extensions = room.find(FIND_MY_STRUCTURES, {
-            filter: s => s.structureType === STRUCTURE_EXTENSION
-        });
-        
+        const spawn = room.find(FIND_MY_SPAWNS)[0];
+        if(!spawn) continue;
+
         console.log(`\n=== Room ${roomName} Status ===`);
         
         // Energy and Controller status
         console.log(`Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${Math.floor((room.energyAvailable/room.energyCapacityAvailable) * 100)}%)`);
         console.log(`Controller Level ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
         
+        // Tower Construction Status
+        const towerSites = room.find(FIND_CONSTRUCTION_SITES, {
+            filter: site => site.structureType === STRUCTURE_TOWER
+        });
+        
+        if(towerSites.length > 0) {
+            console.log('\nTower Construction Priority:');
+            towerSites.forEach(site => {
+                const towerName = getTowerName(site.pos, spawn.pos);
+                console.log(`🏗️ ${towerName}: ${Math.floor((site.progress/site.progressTotal) * 100)}% complete`);
+                
+                // Show assigned builders
+                const assignedBuilders = _.filter(Game.creeps, creep => 
+                    creep.memory.role === 'builder' && 
+                    creep.memory.targetId === site.id
+                );
+                if(assignedBuilders.length > 0) {
+                    console.log(`   Builders: ${assignedBuilders.map(b => b.memory.customName).join(', ')}`);
+                }
+            });
+        }
+
         // Extensions status
-        const extensionNames = ['Bethesda', 'Silver Spring', 'Gaithersburg', 'Bowie', 'Hagerstown'];
+        const extensions = room.find(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_EXTENSION
+        });
         if(extensions.length > 0) {
             console.log('\nExtensions:');
             extensions.forEach((ext, index) => {
@@ -131,6 +152,7 @@ function showDetailedStatus() {
         }
 
         // Construction Progress with names for extensions
+        const sites = room.find(FIND_CONSTRUCTION_SITES);
         if(sites.length > 0) {
             console.log('\nConstruction Progress:');
             sites.forEach(site => {
@@ -146,6 +168,7 @@ function showDetailedStatus() {
         }
 
         // Creep summary
+        const creeps = room.find(FIND_MY_CREEPS);
         const roles = _.groupBy(creeps, c => c.memory.role);
         console.log('\nCreep Count:');
         for(let role in roles) {
@@ -160,6 +183,21 @@ function showDetailedStatus() {
             }
         }
     }
+}
+
+function getTowerName(pos, spawnPos) {
+    // Match position to MARYLAND_LANDMARKS tower positions
+    const landmarks = require('construction.planner').MARYLAND_LANDMARKS;
+    const relativePos = {
+        x: pos.x - spawnPos.x,
+        y: pos.y - spawnPos.y
+    };
+    
+    const tower = landmarks.towers.find(t => 
+        t.pos.x === relativePos.x && t.pos.y === relativePos.y
+    );
+    
+    return tower ? tower.name : 'Unknown Tower';
 }
 
 module.exports.loop = function() {
