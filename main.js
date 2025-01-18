@@ -256,29 +256,26 @@ module.exports.loop = function() {
         enhancedVisuals(Game.rooms[roomName]);
     }
 
-    // Get the specific room
+    // Get your specific room
     const room = Game.rooms['E58N36'];
     if(room) {
-        // Find the mineral
-        const mineral = room.find(FIND_MINERALS)[0];
+        // Find the hydrogen mineral at position 24, 13
+        const mineral = room.lookForAt(LOOK_MINERALS, 24, 13)[0];
         if(mineral) {
-            // Try to place extractor if none exists
-            const extractors = room.find(FIND_STRUCTURES, {
-                filter: s => s.structureType === STRUCTURE_EXTRACTOR
-            });
-            
-            if(extractors.length === 0) {
-                console.log('Attempting to place extractor at:', mineral.pos.x, mineral.pos.y);
-                const result = room.createConstructionSite(
-                    mineral.pos.x, 
-                    mineral.pos.y, 
-                    STRUCTURE_EXTRACTOR
-                );
+            // Check for existing extractor
+            const extractorSites = room.lookForAt(LOOK_CONSTRUCTION_SITES, 24, 13)
+                .filter(site => site.structureType === STRUCTURE_EXTRACTOR);
+            const extractors = room.lookForAt(LOOK_STRUCTURES, 24, 13)
+                .filter(structure => structure.structureType === STRUCTURE_EXTRACTOR);
+
+            if(extractors.length === 0 && extractorSites.length === 0) {
+                console.log('Placing extractor at hydrogen deposit (24, 13)');
+                const result = room.createConstructionSite(24, 13, STRUCTURE_EXTRACTOR);
                 console.log('Extractor placement result:', result);
             }
         }
 
-        // Try to place storage near spawn
+        // Place storage in a good spot near Annapolis (your spawn)
         const spawn = Game.spawns['Spawn1'];
         if(spawn) {
             const storages = room.find(FIND_STRUCTURES, {
@@ -286,14 +283,29 @@ module.exports.loop = function() {
             });
             
             if(storages.length === 0) {
-                console.log('Attempting to place storage near spawn');
-                const result = room.createConstructionSite(
-                    spawn.pos.x + 2,
-                    spawn.pos.y + 2,
-                    STRUCTURE_STORAGE
-                );
-                console.log('Storage placement result:', result);
+                // Try to place storage 2 tiles away from spawn, avoiding roads
+                const storagePos = {
+                    x: spawn.pos.x + 2,
+                    y: spawn.pos.y + 2
+                };
+                
+                // Check if position is valid
+                if(room.lookForAt(LOOK_STRUCTURES, storagePos.x, storagePos.y).length === 0) {
+                    console.log('Placing storage near Annapolis');
+                    const result = room.createConstructionSite(
+                        storagePos.x,
+                        storagePos.y,
+                        STRUCTURE_STORAGE
+                    );
+                    console.log('Storage placement result:', result);
+                }
             }
+        }
+
+        // Visualize planned structures
+        room.visual.structure(24, 13, STRUCTURE_EXTRACTOR, {opacity: 0.5});
+        if(spawn) {
+            room.visual.structure(spawn.pos.x + 2, spawn.pos.y + 2, STRUCTURE_STORAGE, {opacity: 0.5});
         }
     }
 
