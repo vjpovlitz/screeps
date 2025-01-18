@@ -19,10 +19,22 @@ module.exports = {
     },
 
     run: function() {
+        // Debug output every 15 ticks
+        if(Game.time % 15 === 0) {
+            console.log('=== Creep Name Status ===');
+            for(let name in Game.creeps) {
+                const creep = Game.creeps[name];
+                console.log(`${creep.name}: Custom Name = ${creep.memory.customName || 'None'}, Role = ${creep.memory.role}`);
+            }
+            console.log('=== Available Names ===');
+            console.log(this.getAvailableNames().join(', '));
+        }
+
         // Clear memory of dead creeps
         for(let name in Memory.creeps) {
             if(!Game.creeps[name]) {
                 delete Memory.creeps[name];
+                console.log('Clearing dead creep memory:', name);
             }
         }
 
@@ -34,14 +46,21 @@ module.exports = {
         const upgraders = _.filter(Game.creeps, creep => creep.memory.role === 'upgrader');
         const builders = _.filter(Game.creeps, creep => creep.memory.role === 'builder');
 
-        // Assign names to unnamed creeps
+        // Force name assignment for unnamed creeps
         for(let name in Game.creeps) {
             const creep = Game.creeps[name];
-            if(!creep.memory.customName) {
-                const newName = this.getNextName();
-                if(newName) {
-                    creep.memory.customName = newName;
-                    console.log(`Assigned name ${newName} to ${creep.name}`);
+            if(!creep.memory.customName || creep.memory.customName === 'undefined') {
+                const availableName = this.getNextName();
+                if(availableName) {
+                    creep.memory.customName = availableName;
+                    console.log(`🏷️ Assigned name ${availableName} to ${creep.name}`);
+                    // Visualize the name assignment
+                    creep.room.visual.text(
+                        `${availableName}`,
+                        creep.pos.x,
+                        creep.pos.y - 0.5,
+                        {align: 'center', opacity: 0.8}
+                    );
                 }
             }
         }
@@ -126,6 +145,17 @@ module.exports = {
         }
     },
 
+    getAvailableNames: function() {
+        const usedNames = new Set();
+        for(let name in Game.creeps) {
+            const creep = Game.creeps[name];
+            if(creep.memory.customName) {
+                usedNames.add(creep.memory.customName);
+            }
+        }
+        return this.namePool.filter(name => !usedNames.has(name));
+    },
+
     getNextName: function() {
         const usedNames = new Set();
         for(let name in Game.creeps) {
@@ -135,7 +165,17 @@ module.exports = {
             }
         }
         
-        return this.namePool.find(name => !usedNames.has(name));
+        // Debug output for name selection
+        const availableName = this.namePool.find(name => !usedNames.has(name));
+        if(availableName) {
+            console.log(`Found available name: ${availableName}`);
+            console.log(`Currently used names: ${Array.from(usedNames).join(', ')}`);
+        } else {
+            console.log('No available names found!');
+            console.log(`All names in use: ${Array.from(usedNames).join(', ')}`);
+        }
+        
+        return availableName;
     },
 
     getOptimalBody: function(energy) {
