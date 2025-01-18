@@ -378,8 +378,8 @@ var tower_manager = {
 var visual_manager = {
     run: function(room) {
         // Dashboard position in top right
-        const dashX = 45;  // Adjust these coordinates as needed
-        const dashY = 2;
+        const dashX = 45;
+        const dashY = 1;
         const lineHeight = 1.2;
 
         // Draw dashboard background
@@ -390,16 +390,6 @@ var visual_manager = {
         });
 
         // Room Status Dashboard
-        this.displayDashboard(room, dashX, dashY, lineHeight);
-        
-        // Display other visuals (sources, spawns, etc.)
-        this.displayStructureLabels(room);
-        
-        // Display construction progress (but not individual roads)
-        this.displayConstructionProgress(room);
-    },
-
-    displayDashboard: function(room, x, y, lineHeight) {
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if(!spawn) return;
 
@@ -413,86 +403,39 @@ var visual_manager = {
 
         // Dashboard Content
         room.visual.text(
-            `🏰 RCL ${room.controller.level} (${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%)`,
-            x, y,
+            `RCL ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`,
+            dashX, dashY,
             {align: 'left', color: '#ffff00'}
         );
 
         room.visual.text(
             `⚡ ${room.energyAvailable}/${room.energyCapacityAvailable}`,
-            x, y + lineHeight,
+            dashX, dashY + lineHeight,
             {align: 'left', color: '#ffaa00'}
         );
 
         room.visual.text(
-            `👷 H:${creepCounts.harvester || 0} U:${creepCounts.upgrader || 0} B:${creepCounts.builder || 0}`,
-            x, y + lineHeight * 2,
+            `👷 H:${creepCounts.harvester || 0}/${4} U:${creepCounts.upgrader || 0}/${2} B:${creepCounts.builder || 0}/${3}`,
+            dashX, dashY + lineHeight * 2,
             {align: 'left', color: '#ffffff'}
         );
 
-        room.visual.text(
-            `🏗️ Sites: ${buildingSites.length}`,
-            x, y + lineHeight * 3,
-            {align: 'left', color: '#ffaa00'}
-        );
-
-        // CPU Usage
-        room.visual.text(
-            `🔄 CPU: ${Game.cpu.getUsed().toFixed(1)}`,
-            x, y + lineHeight * 4,
-            {align: 'left', color: '#00ff00'}
-        );
-    },
-
-    displayStructureLabels: function(room) {
-        // Show Maryland city names at sources
-        const sources = room.find(FIND_SOURCES);
-        sources.forEach((source, index) => {
-            const name = index === 0 ? 'Baltimore' : 'Frederick';
+        // Show active construction
+        if(buildingSites.length > 0) {
+            const prioritySite = buildingSites[0];
             room.visual.text(
-                `⚡ ${name}`,
-                source.pos.x, source.pos.y - 1,
-                {color: '#ffaa00', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
-            );
-        });
-
-        // Show spawn name
-        const spawn = room.find(FIND_MY_SPAWNS)[0];
-        if(spawn) {
-            room.visual.text(
-                '🏛️ Annapolis',
-                spawn.pos.x, spawn.pos.y - 1,
-                {color: '#ffffff', stroke: '#000000', strokeWidth: 0.2, font: 0.7}
+                `🏗️ ${prioritySite.structureType}: ${Math.floor((prioritySite.progress/prioritySite.progressTotal) * 100)}%`,
+                dashX, dashY + lineHeight * 3,
+                {align: 'left', color: '#ffaa00'}
             );
         }
-    },
 
-    displayConstructionProgress: function(room) {
-        const sites = room.find(FIND_CONSTRUCTION_SITES);
-        const significantSites = _.filter(sites, s => 
-            s.structureType !== STRUCTURE_ROAD || 
-            s.progress > s.progressTotal * 0.5
+        // Show creep capacity
+        room.visual.text(
+            `🤖 Creeps: ${creeps.length}/10`,
+            dashX, dashY + lineHeight * 4,
+            {align: 'left', color: '#00ff00'}
         );
-
-        significantSites.forEach(site => {
-            if(site.structureType === STRUCTURE_EXTENSION) {
-                const extensionNames = ['Bethesda', 'Silver Spring', 'Gaithersburg', 'Bowie', 'Hagerstown'];
-                const name = extensionNames[site.id % extensionNames.length];
-                if(site.progress > 0) {
-                    room.visual.text(
-                        `${name}: ${Math.floor((site.progress/site.progressTotal) * 100)}%`,
-                        site.pos.x, site.pos.y - 0.5,
-                        {color: '#ffffff', font: 0.4}
-                    );
-                }
-            } else if(site.structureType === STRUCTURE_TOWER) {
-                room.visual.text(
-                    `Tower: ${Math.floor((site.progress/site.progressTotal) * 100)}%`,
-                    site.pos.x, site.pos.y - 0.5,
-                    {color: '#ff0000', font: 0.4}
-                );
-            }
-        });
     }
 };
 
