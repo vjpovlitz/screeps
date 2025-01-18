@@ -8,7 +8,15 @@ module.exports = {
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if(!spawn) return;
         
-        const creeps = room.find(FIND_MY_CREEPS);
+        // Get all creeps and sort them by name with Julian before Hellboy
+        const creeps = room.find(FIND_MY_CREEPS).sort((a, b) => {
+            if (a.name === 'Julian') return -1;
+            if (b.name === 'Julian') return 1;
+            if (a.name === 'Hellboy') return 1;
+            if (b.name === 'Hellboy') return -1;
+            return a.name.localeCompare(b.name);
+        });
+
         const creepCounts = _.countBy(creeps, c => c.memory.role);
         const sites = room.find(FIND_CONSTRUCTION_SITES);
         

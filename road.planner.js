@@ -10,14 +10,8 @@ module.exports = {
         const sources = room.find(FIND_SOURCES);
         const controller = room.controller;
         
-        // Check if Baltimore to Annapolis road exists
-        const baltimore = Game.flags.Baltimore;
-        const annapolis = spawn;
+        // Skip Baltimore to Annapolis road planning since it's complete
         
-        if (baltimore && !this.roadExists(room, baltimore.pos, annapolis.pos)) {
-            this.planRoad(room, baltimore.pos, annapolis.pos, '#ffffff');
-        }
-
         // Plan roads to other destinations if needed
         sources.forEach(source => {
             if (!this.roadExists(room, spawn.pos, source.pos)) {
