@@ -4,14 +4,16 @@
   "description": "Screeps scripts",
   "main": "main.js",
   "scripts": {
-    "clean": "if exist dist rd /s /q dist",
-    "watch": "chokidar \"*.js\" -i \"dist/**\" -c \"git add . && git commit -m \\\"Auto-update Screeps code\\\" && git push\"",
-    "start": "npm run clean && npm run watch",
-    "push": "git add . && git commit -m \"Update Screeps code\" && git push"
+    "push": "git add . && git commit -m \"Update Screeps code [%DATE%]\" && git push",
+    "watch": "chokidar \"**/*.js\" -c \"npm run push\"",
+    "start": "npm run watch",
+    "deploy": "git add . && git commit -m \"Major update: %npm_config_msg%\" && git push",
+    "quick": "git add . && git commit -m \"Quick fix\" && git push"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "chokidar-cli": "^3.0.0"
+    "chokidar-cli": "^3.0.0",
+    "cross-env": "^7.0.3"
   }
 }

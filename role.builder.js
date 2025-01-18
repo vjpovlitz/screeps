@@ -1,3 +1,5 @@
+const movementHelper = require('movement.helper');
+
 module.exports = {
     run: function(creep) {
         // State management
@@ -25,18 +27,14 @@ module.exports = {
                 }
 
                 if(creep.build(target) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, {
-                        visualizePathStyle: {stroke: '#ffffff'}
-                    });
+                    movementHelper.moveOnRoad(creep, target);
                 }
             } else {
                 // Repair logic - prioritize roads and containers
                 const repairTarget = this.findRepairTarget(creep);
                 if(repairTarget) {
                     if(creep.repair(repairTarget) == ERR_NOT_IN_RANGE) {
-                        creep.moveTo(repairTarget, {
-                            visualizePathStyle: {stroke: '#ffffff'}
-                        });
+                        movementHelper.moveOnRoad(creep, repairTarget);
                     }
                 }
             }
@@ -44,9 +42,7 @@ module.exports = {
             // Harvesting logic
             const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
             if(source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(source, {
-                    visualizePathStyle: {stroke: '#ffaa00'}
-                });
+                movementHelper.moveOnRoad(creep, source);
             }
         }
     },

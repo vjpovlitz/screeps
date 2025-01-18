@@ -1,3 +1,5 @@
+const movementHelper = require('movement.helper');
+
 module.exports = {
     run: function(creep) {
         if(creep.memory.hauling && creep.store[RESOURCE_ENERGY] == 0) {
@@ -8,7 +10,6 @@ module.exports = {
         }
 
         if(creep.memory.hauling) {
-            // Priority order: Tower, Spawn, Extensions
             const tower = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_TOWER && 
                            s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
@@ -16,12 +17,11 @@ module.exports = {
             
             if(tower) {
                 if(creep.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(tower, {visualizePathStyle: {stroke: '#ffffff'}});
+                    movementHelper.moveOnRoad(creep, tower);
                 }
                 return;
             }
 
-            // If no tower needs energy, fill other structures
             const target = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: s => (s.structureType === STRUCTURE_SPAWN ||
                             s.structureType === STRUCTURE_EXTENSION) &&
@@ -30,7 +30,7 @@ module.exports = {
             
             if(target) {
                 if(creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, {visualizePathStyle: {stroke: '#ffffff'}});
+                    movementHelper.moveOnRoad(creep, target);
                 }
             }
         }

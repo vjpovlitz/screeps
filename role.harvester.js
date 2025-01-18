@@ -1,4 +1,5 @@
 const constructionManager = require('construction.manager');
+const movementHelper = require('movement.helper');
 
 module.exports = {
     /** @param {Creep} creep **/
@@ -53,10 +54,7 @@ module.exports = {
             const source = Game.getObjectById(creep.memory.sourceId);
             if(source) {
                 if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source, {
-                        visualizePathStyle: {stroke: '#ffaa00'},
-                        reusePath: 20
-                    });
+                    movementHelper.moveOnRoad(creep, source);
                 }
             }
         } else {
@@ -85,10 +83,7 @@ module.exports = {
 
             if(targets.length > 0) {
                 if(creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targets[0], {
-                        visualizePathStyle: {stroke: '#ffffff'},
-                        reusePath: 20
-                    });
+                    movementHelper.moveOnRoad(creep, targets[0]);
                 }
             }
         }
