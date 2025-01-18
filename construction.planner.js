@@ -141,49 +141,75 @@ module.exports = {
     },
 
     planTowers: function(room, spawn) {
-        if(room.controller.level >= 3) {
-            // Try to build all possible towers
-            this.MARYLAND_LANDMARKS.towers.forEach(tower => {
-                const towerPos = {
-                    x: spawn.pos.x + tower.pos.x,
-                    y: spawn.pos.y + tower.pos.y
-                };
+        if(!spawn || room.controller.level < 3) return;
 
-                // Check existing towers at this position
-                const existingTower = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y)
-                    .find(s => s.structureType === STRUCTURE_TOWER);
-                
-                if(!existingTower) {
-                    // Clear any roads or other structures
-                    const structures = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y);
-                    structures.forEach(structure => {
-                        if(structure.structureType === STRUCTURE_ROAD) {
-                            structure.destroy();
-                        }
-                    });
+        // Try to build all possible towers
+        this.MARYLAND_LANDMARKS.towers.forEach(tower => {
+            const towerPos = {
+                x: spawn.pos.x + tower.pos.x,
+                y: spawn.pos.y + tower.pos.y
+            };
 
-                    // Create the tower construction site
-                    const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
-                    if(result === OK) {
-                        console.log(`🏗️ Planning tower ${tower.name} at (${towerPos.x},${towerPos.y})`);
-                        
-                        // Visualize planned tower
-                        room.visual.structure(towerPos.x, towerPos.y, STRUCTURE_TOWER, {
-                            opacity: 0.5,
-                            stroke: '#ff0000'
-                        });
-                        
-                        // Show coverage
-                        room.visual.circle(towerPos.x, towerPos.y, {
-                            radius: 5,
-                            fill: 'transparent',
-                            stroke: '#ff0000',
-                            opacity: 0.3
-                        });
+            // Check if tower already exists at this position
+            const existingTower = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y)
+                .find(s => s.structureType === STRUCTURE_TOWER);
+            
+            // Check if construction site already exists
+            const existingSite = room.lookForAt(LOOK_CONSTRUCTION_SITES, towerPos.x, towerPos.y)
+                .find(s => s.structureType === STRUCTURE_TOWER);
+
+            if(!existingTower && !existingSite) {
+                // Clear any roads or other structures
+                const structures = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y);
+                structures.forEach(structure => {
+                    if(structure.structureType === STRUCTURE_ROAD) {
+                        structure.destroy();
                     }
+                });
+
+                // Create the tower construction site
+                const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+                if(result === OK) {
+                    console.log(`🏗️ Planning tower ${tower.name} at (${towerPos.x},${towerPos.y})`);
+                } else {
+                    console.log(`⚠️ Failed to plan ${tower.name} at (${towerPos.x},${towerPos.y}), result: ${result}`);
                 }
+            }
+        });
+
+        // Visualize all planned and existing towers
+        this.MARYLAND_LANDMARKS.towers.forEach(tower => {
+            const towerX = spawn.pos.x + tower.pos.x;
+            const towerY = spawn.pos.y + tower.pos.y;
+
+            const existingTower = room.lookForAt(LOOK_STRUCTURES, towerX, towerY)
+                .find(s => s.structureType === STRUCTURE_TOWER);
+            const constructionSite = room.lookForAt(LOOK_CONSTRUCTION_SITES, towerX, towerY)
+                .find(s => s.structureType === STRUCTURE_TOWER);
+
+            let color = '#ff0000';  // Red for planned
+            if(existingTower) {
+                color = '#00ff00';  // Green for built
+            } else if(constructionSite) {
+                color = '#ffaa00';  // Orange for under construction
+            }
+
+            // Show tower name and range
+            room.visual.text(
+                `🗼 ${tower.name}`,
+                towerX, towerY - 1,
+                {color: color, stroke: '#000000', strokeWidth: 0.2, font: 0.5}
+            );
+
+            // Show coverage radius
+            room.visual.circle(towerX, towerY, {
+                radius: 5,
+                fill: 'transparent',
+                stroke: color,
+                strokeWidth: 0.2,
+                opacity: 0.3
             });
-        }
+        });
     },
 
     planExtensions: function(room, spawn) {
