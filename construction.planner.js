@@ -35,10 +35,10 @@ module.exports = {
 
     MARYLAND_LANDMARKS: {
         towers: [
-            { name: "Fort McHenry", pos: {x: 2, y: 2} },       // South tower by spawn
-            { name: "Fort Baltimore", pos: {x: -8, y: -6} },    // North tower protecting Baltimore
-            { name: "Fort Meade", pos: {x: -4, y: 4} },        // West tower for defense
-            { name: "Fort Washington", pos: {x: 6, y: -2} }     // East tower for coverage
+            { name: "Fort McHenry", pos: {x: 2, y: 2} },          // Original position by spawn
+            { name: "Fort Washington", pos: {x: -2, y: -12} },     // Up by North Beach
+            { name: "Fort Baltimore", pos: {x: 6, y: -4} },        // Near Baltimore harvester
+            { name: "Fort Meade", pos: {x: -8, y: -6} }           // At the chokepoint
         ],
         extensions: [
             "Fairhaven", "North Beach", "Deale", "Shady Side", 
