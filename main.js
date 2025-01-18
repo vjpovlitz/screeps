@@ -183,6 +183,7 @@ module.exports.loop = function() {
         roadPlanner.run(room);
         towerManager.run(room);
         performanceMonitor.run(room);
+        constructionPlanner.run(room);
 
         room.visual.text(
             `Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,

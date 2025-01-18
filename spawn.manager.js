@@ -120,11 +120,11 @@ module.exports = {
 
     getUpgraderBody: function(energy) {
         if(energy >= 800) {
-            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+            return [WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
         } else if(energy >= 550) {
-            return [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
         }
-        return [WORK, CARRY, MOVE];
+        return [WORK, WORK, CARRY, MOVE];
     },
 
     getAvailableNames: function() {
