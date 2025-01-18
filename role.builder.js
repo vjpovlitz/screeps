@@ -11,25 +11,36 @@ module.exports = {
         }
 
         if(creep.memory.building) {
-            // Find construction sites
-            const targets = creep.room.find(FIND_CONSTRUCTION_SITES);
-            if(targets.length) {
-                if(creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targets[0], {
-                        visualizePathStyle: {stroke: '#ffffff'},
-                        reusePath: 20
+            // First priority: Roads under construction
+            const roadSites = creep.room.find(FIND_CONSTRUCTION_SITES, {
+                filter: site => site.structureType === STRUCTURE_ROAD
+            });
+            
+            // Second priority: Other construction sites
+            const otherSites = creep.room.find(FIND_CONSTRUCTION_SITES, {
+                filter: site => site.structureType !== STRUCTURE_ROAD
+            });
+            
+            const target = roadSites.length > 0 ? roadSites[0] : 
+                          otherSites.length > 0 ? otherSites[0] : null;
+
+            if(target) {
+                if(creep.build(target) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, {
+                        visualizePathStyle: {stroke: '#ffffff'}
                     });
                 }
             } else {
-                // Repair if nothing to build
-                const repairs = creep.room.find(FIND_STRUCTURES, {
-                    filter: object => object.hits < object.hitsMax
+                // No construction sites, repair roads instead
+                const damagedRoad = creep.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: structure => structure.structureType === STRUCTURE_ROAD && 
+                                      structure.hits < structure.hitsMax
                 });
-                repairs.sort((a,b) => a.hits/a.hitsMax - b.hits/b.hitsMax);
-                
-                if(repairs.length > 0) {
-                    if(creep.repair(repairs[0]) == ERR_NOT_IN_RANGE) {
-                        creep.moveTo(repairs[0]);
+                if(damagedRoad) {
+                    if(creep.repair(damagedRoad) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(damagedRoad, {
+                            visualizePathStyle: {stroke: '#ffffff'}
+                        });
                     }
                 }
             }
@@ -37,10 +48,9 @@ module.exports = {
         else {
             // Find closest source
             const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-            if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
+            if(source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(source, {
-                    visualizePathStyle: {stroke: '#ffaa00'},
-                    reusePath: 20
+                    visualizePathStyle: {stroke: '#ffaa00'}
                 });
             }
         }
