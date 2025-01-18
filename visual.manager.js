@@ -1,33 +1,32 @@
 module.exports = {
     run: function(room) {
-        const dashX = 2;  // X position of dashboard
-        const dashY = 2;  // Y position of dashboard
-        const lineHeight = 1.2;  // Space between lines
-        const padding = 1;
-        const boxWidth = 25;  // Width of the dashboard box
+        const dashX = 1;  // Adjusted X position
+        const dashY = 1;  // Adjusted Y position
+        const lineHeight = 1.2;
+        const padding = 0.5;
+        const boxWidth = 25;
 
-        // Calculate dashboard size including all construction types
-        const numConstructionTypes = 3; // road, extension, container
-        const numLines = 5 + numConstructionTypes;
-        
-        // Draw dashboard background
-        room.visual.rect(dashX - padding, dashY - padding, boxWidth, (numLines * lineHeight) + padding, {
+        // Draw dashboard background in original position
+        room.visual.rect(dashX, dashY, boxWidth, 8, {
             fill: '#000000',
             opacity: 0.7,
             stroke: '#ffffff',
             strokeWidth: 0.05
         });
 
-        // Main Stats - Centered
+        // Center text within existing box
+        const textX = dashX + (boxWidth/2);
+        
+        // Rest of your visualization code with centered text positions
         room.visual.text(
             `🏰 RCL ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`,
-            dashX + (boxWidth/2), dashY,
+            textX, dashY + 0.5,
             {align: 'center', color: '#ffff00', font: 0.8}
         );
 
         room.visual.text(
             `⚡ ${room.energyAvailable}/${room.energyCapacityAvailable}`,
-            dashX + (boxWidth/2), dashY + lineHeight,
+            textX, dashY + lineHeight,
             {align: 'center', color: '#ffaa00', font: 0.8}
         );
 
@@ -36,14 +35,14 @@ module.exports = {
         const creepCounts = _.countBy(creeps, c => c.memory.role);
         room.visual.text(
             `👷 H:${creepCounts.harvester || 0}/4 U:${creepCounts.upgrader || 0}/2 B:${creepCounts.builder || 0}/3`,
-            dashX + (boxWidth/2), dashY + lineHeight * 2,
+            textX, dashY + lineHeight * 2,
             {align: 'center', color: '#ffffff', font: 0.8}
         );
 
         // Construction Progress Header - Centered
         room.visual.text(
             `🏗️ Construction Progress:`,
-            dashX + (boxWidth/2), dashY + lineHeight * 3,
+            textX, dashY + lineHeight * 3,
             {align: 'center', color: '#ffaa00', font: 0.8}
         );
 
@@ -70,7 +69,7 @@ module.exports = {
             
             room.visual.text(
                 text,
-                dashX + (boxWidth/2), dashY + lineHeight * lineOffset++,
+                textX, dashY + lineHeight * lineOffset++,
                 {align: 'center', color: '#ffffff', font: 0.7}
             );
         });
@@ -78,20 +77,20 @@ module.exports = {
         // Performance Metrics Header - Centered
         room.visual.text(
             `📊 Performance Metrics:`,
-            dashX + (boxWidth/2), dashY + lineHeight * (lineOffset + 1),
+            textX, dashY + lineHeight * (lineOffset + 1),
             {align: 'center', color: '#00ff00', font: 0.8}
         );
 
         // Performance Metrics - Centered
         room.visual.text(
             `Upgrade Rate: ${room.controller.progress}/tick`,
-            dashX + (boxWidth/2), dashY + lineHeight * (lineOffset + 2),
+            textX, dashY + lineHeight * (lineOffset + 2),
             {align: 'center', color: '#ffffff', font: 0.7}
         );
 
         room.visual.text(
             `CPU Efficiency: ${(Game.cpu.getUsed() * 100 / Game.cpu.limit).toFixed(1)}%`,
-            dashX + (boxWidth/2), dashY + lineHeight * (lineOffset + 3),
+            textX, dashY + lineHeight * (lineOffset + 3),
             {align: 'center', color: '#ffffff', font: 0.7}
         );
     },
