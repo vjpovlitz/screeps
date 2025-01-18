@@ -28,68 +28,65 @@ module.exports = {
 
         const spawn = Game.spawns['Spawn1'];
         
-        // Rename spawn if not already done
-        if(!spawn.memory.renamed) {
-            spawn.memory.renamed = true;
-            // Note: actual spawn renaming requires Game.spawns['Spawn1'].rename('Annapolis')
-            // which costs game currency
+        // Don't try to spawn if already spawning
+        if(spawn.spawning) {
+            this.showSpawningVisual(spawn);
+            return;
         }
-
-        // Calculate needed creeps
-        const minCreeps = {
-            harvester: 4,
-            upgrader: 3,
-            builder: 3
-        };
 
         // Get current creep counts
-        const creepCounts = {};
-        for(let role in minCreeps) {
-            creepCounts[role] = _.filter(Game.creeps, creep => creep.memory.role === role).length;
-        }
+        const creepsByRole = {
+            harvester: _.filter(Game.creeps, creep => creep.memory.role === 'harvester'),
+            upgrader: _.filter(Game.creeps, creep => creep.memory.role === 'upgrader'),
+            builder: _.filter(Game.creeps, creep => creep.memory.role === 'builder')
+        };
 
-        // Determine what to spawn
+        // Track used names
+        const usedNames = new Set(Object.values(Game.creeps).map(creep => creep.name));
+
+        // Determine what to spawn based on minimum counts
         let roleToSpawn = null;
-        for(let role in minCreeps) {
-            if(creepCounts[role] < minCreeps[role]) {
-                roleToSpawn = role;
-                break;
-            }
-        }
+        if(creepsByRole.harvester.length < 4) roleToSpawn = 'harvester';
+        else if(creepsByRole.upgrader.length < 2) roleToSpawn = 'upgrader';
+        else if(creepsByRole.builder.length < 2) roleToSpawn = 'builder';
 
-        if(roleToSpawn) {
-            // Get optimal body based on available energy
+        // Only spawn if we need to and have enough energy
+        if(roleToSpawn && spawn.room.energyAvailable >= 200) {
+            // Find first unused name
+            const availableName = this.namePool.find(name => !usedNames.has(name));
+            if(!availableName) {
+                console.log('All names are in use!');
+                return;
+            }
+
             const bodyParts = this.getOptimalBody(spawn.room.energyAvailable);
             
-            // Get next available name
-            const name = this.getNextName(roleToSpawn);
+            console.log(`Attempting to spawn ${roleToSpawn} with name: ${availableName}`);
             
-            console.log(`Spawning ${roleToSpawn} named ${name}`);
-            
-            const result = spawn.spawnCreep(bodyParts, name, {
+            const result = spawn.spawnCreep(bodyParts, availableName, {
                 memory: {
                     role: roleToSpawn,
                     working: false,
-                    originalName: name,
                     homeBase: this.townNames.spawn
                 }
             });
 
             if(result === OK) {
-                console.log(`Successfully spawned ${name} (${roleToSpawn})`);
+                console.log(`Successfully spawned ${availableName} as ${roleToSpawn}`);
+            } else {
+                console.log(`Failed to spawn with error: ${result}`);
             }
         }
+    },
 
-        // Spawning visual
-        if(spawn.spawning) { 
-            const spawningCreep = Game.creeps[spawn.spawning.name];
-            spawn.room.visual.text(
-                '🛠️' + spawningCreep.memory.role,
-                spawn.pos.x + 1, 
-                spawn.pos.y, 
-                {align: 'left', opacity: 0.8}
-            );
-        }
+    showSpawningVisual: function(spawn) {
+        const spawningCreep = Game.creeps[spawn.spawning.name];
+        spawn.room.visual.text(
+            '🛠️' + spawningCreep.memory.role,
+            spawn.pos.x + 1, 
+            spawn.pos.y, 
+            {align: 'left', opacity: 0.8}
+        );
     },
 
     getOptimalBody: function(energy) {
@@ -99,26 +96,7 @@ module.exports = {
             return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
         } else if(energy >= 400) {
             return [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
-        } else {
-            return [WORK, CARRY, MOVE];
         }
-    },
-
-    getNextName: function(role) {
-        const usedNames = new Set(Object.values(Game.creeps).map(creep => creep.name));
-        
-        // Try to assign an unused name from the pool
-        for(let name of this.namePool) {
-            if(!usedNames.has(name)) {
-                return name;
-            }
-        }
-        
-        // If all names are used, create a new numbered version
-        let counter = 1;
-        while(usedNames.has(`${this.namePool[0]}_${counter}`)) {
-            counter++;
-        }
-        return `${this.namePool[0]}_${counter}`;
+        return [WORK, CARRY, MOVE];
     }
 }; 
