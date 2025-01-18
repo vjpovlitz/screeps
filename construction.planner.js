@@ -31,8 +31,8 @@ module.exports = {
     MARYLAND_LANDMARKS: {
         towers: [
             { name: "Fort McHenry", pos: {x: 3, y: 3} },          // Better defensive position near spawn
-            { name: "Fort Washington", pos: {x: 4, y: -13} },      // Adjusted to 7 units right, near North Beach
-            { name: "Fort Baltimore", pos: {x: -10, y: -16} },       // Between Trevor and Jocelyn builders
+            { name: "Fort Washington", pos: {x: 5, y: -10} },      // Adjusted to 7 units right, near North Beach
+            { name: "Fort Baltimore", pos: {x: -12, y: -19} },       // Between Trevor and Jocelyn builders
             { name: "Fort Meade", pos: {x: -8, y: -6} }           // Keeping this position at the chokepoint
         ],
         extensions: [
