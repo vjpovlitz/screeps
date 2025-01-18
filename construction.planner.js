@@ -31,9 +31,9 @@ module.exports = {
     MARYLAND_LANDMARKS: {
         towers: [
             { name: "Fort McHenry", pos: {x: 3, y: 3} },          // Better defensive position near spawn
-            { name: "Fort Washington", pos: {x: 7, y: -10} },      // Adjusted to 7 units right, near North Beach
-            { name: "Fort Baltimore", pos: {x: -13, y: -19} },       // Between Trevor and Jocelyn builders
-            { name: "Fort Meade", pos: {x: -8, y: -6} }           // Keeping this position at the chokepoint
+            { name: "Fort Washington", pos: {x: 3, y: -14} },      // Adjusted to 7 units right, near North Beach
+            { name: "Fort Baltimore", pos: {x: -2, y: -8} },       // Between Trevor and Jocelyn builders
+            { name: "Fort Meade", pos: {x: 5, y: 15} }            // Moved to new strategic position
         ],
         extensions: [
             "Fairhaven", "North Beach", "Deale", "Shady Side", 
@@ -146,45 +146,53 @@ module.exports = {
             return;
         }
 
-        // Sort towers by priority (Fort McHenry first)
-        const prioritizedTowers = [...this.MARYLAND_LANDMARKS.towers].sort((a, b) => {
-            if(a.name === "Fort McHenry") return -1;
-            if(b.name === "Fort McHenry") return 1;
-            return 0;
+        // Get max towers allowed at current RCL
+        const maxTowers = {
+            3: 1,
+            4: 1,
+            5: 2,
+            6: 2,
+            7: 3,
+            8: 6
+        }[room.controller.level] || 0;
+
+        // Count existing towers
+        const existingTowers = room.find(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_TOWER
         });
 
-        // Try to build towers in priority order
-        for(let tower of prioritizedTowers) {
-            const towerPos = {
-                x: spawn.pos.x + tower.pos.x,
-                y: spawn.pos.y + tower.pos.y
-            };
+        if(existingTowers.length >= maxTowers) {
+            console.log(`⚠️ Maximum towers (${maxTowers}) already built for RCL ${room.controller.level}`);
+            return;
+        }
 
-            // Debug position
-            console.log(`🔍 Checking ${tower.name} position at (${towerPos.x}, ${towerPos.y})`);
+        // At RCL 3, only allow Fort McHenry
+        const fortMcHenry = this.MARYLAND_LANDMARKS.towers.find(t => t.name === "Fort McHenry");
+        if(!fortMcHenry) {
+            console.log('❌ Error: Fort McHenry configuration not found');
+            return;
+        }
 
-            const existingTower = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y)
-                .find(s => s.structureType === STRUCTURE_TOWER);
-            
-            const existingSite = room.lookForAt(LOOK_CONSTRUCTION_SITES, towerPos.x, towerPos.y)
-                .find(s => s.structureType === STRUCTURE_TOWER);
+        const towerPos = {
+            x: spawn.pos.x + fortMcHenry.pos.x,
+            y: spawn.pos.y + fortMcHenry.pos.y
+        };
 
-            if(!existingTower && !existingSite) {
-                // Only create one tower construction site at a time
-                const activeTowerSites = room.find(FIND_CONSTRUCTION_SITES, {
-                    filter: site => site.structureType === STRUCTURE_TOWER
-                });
+        console.log(`🔍 Planning Fort McHenry at (${towerPos.x}, ${towerPos.y})`);
 
-                if(activeTowerSites.length === 0) {
-                    const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
-                    console.log(`🏗️ Attempting to create ${tower.name} at (${towerPos.x},${towerPos.y}) - Result: ${result}`);
-                    if(result === OK) {
-                        console.log(`✅ Successfully planned ${tower.name}`);
-                        break;
-                    } else {
-                        console.log(`❌ Failed to plan ${tower.name} - Error code: ${result}`);
-                    }
-                }
+        const existingTower = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y)
+            .find(s => s.structureType === STRUCTURE_TOWER);
+        
+        const existingSite = room.lookForAt(LOOK_CONSTRUCTION_SITES, towerPos.x, towerPos.y)
+            .find(s => s.structureType === STRUCTURE_TOWER);
+
+        if(!existingTower && !existingSite) {
+            const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+            console.log(`🏗️ Attempting to create Fort McHenry - Result: ${result}`);
+            if(result === OK) {
+                console.log(`✅ Successfully planned Fort McHenry (Tower 1/${maxTowers} for RCL ${room.controller.level})`);
+            } else {
+                console.log(`❌ Failed to plan Fort McHenry - Error code: ${result}`);
             }
         }
     },
