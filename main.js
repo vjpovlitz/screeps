@@ -35,13 +35,18 @@ function showDetailedStatus() {
     Capacity: ${room.energyCapacityAvailable}`);
         
         // Controller progress rate
-        if(Memory.rooms[roomName]?.lastProgress) {
+        if(Memory.rooms && 
+           Memory.rooms[roomName] && 
+           Memory.rooms[roomName].lastProgress) {
             const progressRate = room.controller.progress - Memory.rooms[roomName].lastProgress;
             console.log(`\nController Progress Rate: ${progressRate}/tick
     Level: ${room.controller.level}
     Progress: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
         }
-        Memory.rooms[roomName] = Memory.rooms[roomName] || {};
+        
+        // Initialize room memory if it doesn't exist
+        if(!Memory.rooms) Memory.rooms = {};
+        if(!Memory.rooms[roomName]) Memory.rooms[roomName] = {};
         Memory.rooms[roomName].lastProgress = room.controller.progress;
 
         // Creep efficiency
