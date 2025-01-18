@@ -55,14 +55,19 @@ module.exports = {
                 {align: 'left', color: '#ffaa00', font: 0.8}
             );
 
-            // Show all construction types with progress bars
             const typeIcons = {
                 extension: '🔌',
                 tower: '🗼',
                 container: '📦',
                 road: '🛣️',
                 spawn: '🏠',
-                storage: '🏪'
+                storage: '🏪',
+                rampart: '🛡️',
+                link: '🔗',
+                extractor: '⛏️',
+                lab: '🧪',
+                terminal: '📦',
+                factory: '🏭'
             };
 
             Object.entries(constructionByType).forEach(([type, sites]) => {
@@ -78,38 +83,6 @@ module.exports = {
                 );
             });
         }
-
-        // Performance metrics at the bottom
-        this.displayPerformanceMetrics(room, dashX, dashY + lineHeight * (lineOffset + 1));
-    },
-
-    displayPerformanceMetrics: function(room, dashX, dashY) {
-        const cpu = Game.cpu.getUsed();
-        const cpuLimit = Game.cpu.limit;
-        const cpuPercentage = ((cpu / cpuLimit) * 100).toFixed(1);
-        
-        // Get upgrade rate from memory stats
-        const upgradeRate = Memory.stats && Memory.stats.rooms[room.name] 
-            ? Memory.stats.rooms[room.name].upgradeRate.toFixed(2)
-            : '0.00';
-
-        room.visual.text(
-            `📈 Performance Metrics:`,
-            dashX, dashY,
-            {align: 'left', color: '#00ff00', font: 0.8}
-        );
-
-        room.visual.text(
-            `Upgrade Rate: ${upgradeRate}/tick`,
-            dashX, dashY + 1.2,
-            {align: 'left', color: '#ffffff', font: 0.7}
-        );
-
-        room.visual.text(
-            `CPU: ${cpu.toFixed(1)}/${cpuLimit} (${cpuPercentage}%)`,
-            dashX, dashY + 2.4,
-            {align: 'left', color: '#00ff00', font: 0.7}
-        );
     },
 
     getProgressBar: function(percentage) {
