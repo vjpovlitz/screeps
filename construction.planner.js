@@ -58,8 +58,8 @@ module.exports = {
                 y: spawn.pos.y + tower.pos.y
             };
 
-            // Check if tower exists
-            const existingTower = pos.lookFor(LOOK_STRUCTURES)
+            // Check if tower exists using room.lookForAt instead of pos.lookFor
+            const existingTower = room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y)
                 .find(s => s.structureType === STRUCTURE_TOWER);
 
             const color = existingTower ? '#00ff00' : '#ff0000';
