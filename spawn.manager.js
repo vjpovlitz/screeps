@@ -19,6 +19,8 @@ module.exports = {
     },
 
     run: function(spawn) {
+        if (!spawn) return;  // Early return if no spawn is provided
+        
         // Clear memory of dead creeps
         for(let name in Memory.creeps) {
             if(!Game.creeps[name]) {

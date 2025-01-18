@@ -178,7 +178,10 @@ module.exports.loop = function() {
     for(let roomName in Game.rooms) {
         const room = Game.rooms[roomName];
         enhancedVisuals(room);
-        spawnManager.run();
+        const spawn = room.find(FIND_MY_SPAWNS)[0];
+        if(spawn) {
+            spawnManager.run(spawn);
+        }
         visualManager.run(room);
         roadPlanner.run(room);
         towerManager.run(room);
