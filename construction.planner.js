@@ -7,7 +7,93 @@ module.exports = {
             {x: -2, y: 0},                                                 {x: 2, y: 0},
             {x: -2, y: 1},  {x: -1, y: 1},                 {x: 1, y: 1},  {x: 2, y: 1},
             {x: -2, y: 2},  {x: -1, y: 2},  {x: 0, y: 2},  {x: 1, y: 2},  {x: 2, y: 2}
+        ],
+        // Compact fortress pattern around spawn
+        fortress: [
+            // Inner ring (6 extensions)
+            {x: -1, y: -1}, {x: 1, y: -1},
+            {x: -1, y: 1},  {x: 1, y: 1},
+            {x: 0, y: -1},  {x: 0, y: 1},
+            
+            // Middle ring (12 extensions)
+            {x: -2, y: -2}, {x: -1, y: -2}, {x: 0, y: -2}, {x: 1, y: -2}, {x: 2, y: -2},
+            {x: -2, y: 0},                                                  {x: 2, y: 0},
+            {x: -2, y: 2},  {x: -1, y: 2},  {x: 0, y: 2},  {x: 1, y: 2},  {x: 2, y: 2},
+            
+            // Outer ring (for higher RCL)
+            {x: -3, y: -1}, {x: -3, y: 0}, {x: -3, y: 1},
+            {x: 3, y: -1},  {x: 3, y: 0},  {x: 3, y: 1},
+            {x: -1, y: -3}, {x: 0, y: -3}, {x: 1, y: -3},
+            {x: -1, y: 3},  {x: 0, y: 3},  {x: 1, y: 3}
         ]
+    },
+
+    TOWER_POSITIONS: [
+        {x: 2, y: 2},   // First tower - existing position
+        {x: -2, y: -2}  // Second tower - opposite corner for better coverage
+    ],
+
+    MARYLAND_LANDMARKS: {
+        towers: [
+            { name: "Fort McHenry", pos: {x: 2, y: 2} },    // First tower - Baltimore's defender
+            { name: "Fort Washington", pos: {x: -2, y: -2} } // Second tower - Potomac River defense
+        ],
+        extensions: [
+            // Chesapeake Bay towns near Annapolis
+            "Fairhaven", "North Beach", "Deale", "Shady Side", 
+            "Mayo", "Arnold", "Severna Park", "Pasadena",
+            "Gibson Island", "Lake Shore", "Cape St. Claire", "Galesville",
+            "Herald Harbor", "Beverly Beach", "Highland Beach", "Riva"
+        ]
+    },
+
+    visualizeLandmarks: function(room) {
+        const spawn = room.find(FIND_MY_SPAWNS)[0];
+        if(!spawn) return;
+
+        // Visualize existing and planned towers
+        this.MARYLAND_LANDMARKS.towers.forEach(tower => {
+            const pos = {
+                x: spawn.pos.x + tower.pos.x,
+                y: spawn.pos.y + tower.pos.y
+            };
+
+            // Check if tower exists
+            const existingTower = pos.lookFor(LOOK_STRUCTURES)
+                .find(s => s.structureType === STRUCTURE_TOWER);
+
+            const color = existingTower ? '#00ff00' : '#ff0000';
+            
+            // Draw tower name and range
+            room.visual.text(
+                `🗼 ${tower.name}`,
+                pos.x, pos.y - 1,
+                {color: color, stroke: '#000000', strokeWidth: 0.2, font: 0.5}
+            );
+
+            // Show tower range
+            room.visual.circle(pos.x, pos.y, {
+                radius: 5,
+                fill: 'transparent',
+                stroke: color,
+                strokeWidth: 0.2,
+                opacity: 0.3
+            });
+        });
+
+        // Visualize extensions with Maryland town names
+        const extensions = room.find(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_EXTENSION
+        });
+
+        extensions.forEach((extension, index) => {
+            const townName = this.MARYLAND_LANDMARKS.extensions[index] || 'New Town';
+            room.visual.text(
+                `🏘️ ${townName}`,
+                extension.pos.x, extension.pos.y - 0.5,
+                {color: '#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.4}
+            );
+        });
     },
 
     run: function(room) {
@@ -17,14 +103,18 @@ module.exports = {
         const spawn = room.find(FIND_MY_SPAWNS)[0];
         if(!spawn) return;
 
-        // Plan containers first
-        this.planContainers(room, spawn);
-
-        // Then plan tower if we're ready
-        this.planTower(room, spawn);
-
-        // Finally plan extensions
+        // Plan extensions first
         this.planExtensions(room, spawn);
+        
+        // Plan towers to protect the extensions
+        this.planTowers(room, spawn);
+        
+        // Plan containers and roads
+        this.planContainers(room);
+        this.planExtensionRoads(room, spawn);
+        
+        // Add visualization
+        this.visualizeLandmarks(room);
     },
 
     planContainers: function(room, spawn) {
@@ -52,17 +142,39 @@ module.exports = {
         });
     },
 
-    planTower: function(room, spawn) {
-        if(room.controller.level >= 3) {
+    planTowers: function(room, spawn) {
+        if(room.controller.level >= 3) {  // First tower at RCL 3
             const towers = room.find(FIND_MY_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_TOWER
             });
 
-            if(towers.length === 0) {
-                // Place tower in a defensive position
-                const towerPos = {x: spawn.pos.x + 2, y: spawn.pos.y + 2};
+            // Plan towers based on RCL and existing towers
+            const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][room.controller.level];
+            
+            for(let i = towers.length; i < maxTowers && i < this.TOWER_POSITIONS.length; i++) {
+                const towerPos = {
+                    x: spawn.pos.x + this.TOWER_POSITIONS[i].x,
+                    y: spawn.pos.y + this.TOWER_POSITIONS[i].y
+                };
+
                 if(this.isValidBuildPosition(room, towerPos)) {
                     room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+                    
+                    // Visualize tower coverage
+                    room.visual.circle(towerPos.x, towerPos.y, {
+                        radius: 5,
+                        fill: 'transparent',
+                        stroke: '#ff0000',
+                        strokeWidth: 0.15,
+                        opacity: 0.3
+                    });
+
+                    // Add text label
+                    room.visual.text(
+                        `🗼 Tower ${i + 1}`,
+                        towerPos.x, towerPos.y - 1,
+                        {color: '#ff0000', font: 0.5}
+                    );
                 }
             }
         }
@@ -75,17 +187,45 @@ module.exports = {
         });
 
         if(currentExtensions.length < maxExtensions) {
-            // Use the compact layout
-            const layout = this.EXTENSION_LAYOUTS.compact;
+            // Use the fortress layout
+            const layout = this.EXTENSION_LAYOUTS.fortress;
             for(let i = currentExtensions.length; i < maxExtensions && i < layout.length; i++) {
                 const pos = layout[i];
                 const buildX = spawn.pos.x + pos.x;
                 const buildY = spawn.pos.y + pos.y;
+                
                 if(this.isValidBuildPosition(room, {x: buildX, y: buildY})) {
                     room.createConstructionSite(buildX, buildY, STRUCTURE_EXTENSION);
+                    
+                    // Visualize the planned extension
+                    room.visual.structure(buildX, buildY, STRUCTURE_EXTENSION, {
+                        opacity: 0.3,
+                        stroke: '#ffffff'
+                    });
+                    
+                    // Add road connections for inner and middle ring extensions
+                    if(i < 18) { // First 18 extensions get road connections
+                        this.planExtensionRoads(room, buildX, buildY, spawn.pos);
+                    }
                 }
             }
         }
+    },
+
+    planExtensionRoads: function(room, x, y, spawnPos) {
+        // Plan roads around extensions in a way that connects them
+        const roadPositions = [
+            {x: x, y: y-1},  // North
+            {x: x+1, y: y},  // East
+            {x: x, y: y+1},  // South
+            {x: x-1, y: y}   // West
+        ];
+
+        roadPositions.forEach(pos => {
+            if(this.isValidBuildPosition(room, pos)) {
+                room.createConstructionSite(pos.x, pos.y, STRUCTURE_ROAD);
+            }
+        });
     },
 
     hasNearbyContainer: function(pos, room) {
@@ -117,7 +257,7 @@ module.exports = {
 
     isValidBuildPosition: function(room, pos) {
         // Check boundaries
-        if(pos.x < 1 || pos.x > 48 || pos.y < 1 || pos.y > 48) return false;
+        if(pos.x < 2 || pos.x > 47 || pos.y < 2 || pos.y > 47) return false;
 
         // Check for existing structures or construction sites
         const structures = room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y);
@@ -127,5 +267,31 @@ module.exports = {
         return structures.length === 0 && 
                sites.length === 0 && 
                terrain !== 'wall';
+    },
+
+    visualizeTowerCoverage: function(room) {
+        const towers = room.find(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_TOWER
+        });
+
+        towers.forEach((tower, index) => {
+            // Show effective range (green)
+            room.visual.circle(tower.pos.x, tower.pos.y, {
+                radius: 5,
+                fill: 'transparent',
+                stroke: '#00ff00',
+                strokeWidth: 0.15,
+                opacity: 0.2
+            });
+
+            // Show optimal range (yellow)
+            room.visual.circle(tower.pos.x, tower.pos.y, {
+                radius: 3,
+                fill: 'transparent',
+                stroke: '#ffff00',
+                strokeWidth: 0.15,
+                opacity: 0.3
+            });
+        });
     }
 }; 

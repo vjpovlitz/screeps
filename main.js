@@ -216,4 +216,10 @@ module.exports.loop = function() {
         const totalCPU = Game.cpu.getUsed() - mainLoopStart;
         console.log(`CPU: ${totalCPU.toFixed(2)}/${Game.cpu.limit} (${(totalCPU/Game.cpu.limit * 100).toFixed(1)}%)`);
     }
+
+    // Add visualization for each room
+    for(let roomName in Game.rooms) {
+        const room = Game.rooms[roomName];
+        constructionPlanner.visualizeLandmarks(room);
+    }
 }; 
