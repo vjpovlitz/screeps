@@ -29,6 +29,17 @@ module.exports = {
         }
     },
 
+    getOptimalBody: function(energyAvailable) {
+        // Scale creep body based on available energy
+        if(energyAvailable >= 550) {
+            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+        } else if(energyAvailable >= 400) {
+            return [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+        } else {
+            return [WORK, CARRY, MOVE];
+        }
+    },
+
     run: function() {
         // Clear memory of dead creeps
         for(let name in Memory.creeps) {
@@ -38,53 +49,46 @@ module.exports = {
             }
         }
 
-        const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
-        const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
-        
-        console.log('Harvesters: ' + harvesters.length);
+        const harvesters = _.filter(Game.creeps, c => c.memory.role == 'harvester');
+        const upgraders = _.filter(Game.creeps, c => c.memory.role == 'upgrader');
+        const builders = _.filter(Game.creeps, c => c.memory.role == 'builder');
         
         const spawn = Game.spawns['Spawn1'];
-        const bodyParts = [WORK, CARRY, MOVE];
-        const energyCost = 200;
+        const energyAvailable = spawn.room.energyAvailable;
+        
+        // Get optimal body parts based on energy
+        const bodyParts = this.getOptimalBody(energyAvailable);
 
-        // Spawn harvesters with custom names
+        // Spawn priority system
         if(harvesters.length < 4) {
-            if(spawn.room.energyAvailable >= energyCost) {
-                const newName = this.getNextName('Harvester');
-                console.log('Attempting to spawn harvester: ' + newName);
-                const result = spawn.spawnCreep(bodyParts, newName, 
-                    {memory: {
-                        role: 'harvester',
-                        isNamed: true
-                    }});
-                
-                if(result == OK) {
-                    console.log('Successfully spawning new harvester: ' + newName);
-                } else {
-                    console.log('Failed to spawn harvester with error: ' + result);
-                }
-            } else {
-                console.log('Waiting for energy: ' + spawn.room.energyAvailable + '/' + energyCost);
-            }
+            this.spawnCreep(spawn, 'harvester', bodyParts);
         }
-        // Spawn upgraders with custom names
-        else if(upgraders.length < 2 && spawn.room.energyAvailable >= energyCost) {
-            const newName = this.getNextName('Upgrader');
-            spawn.spawnCreep(bodyParts, newName,
-                {memory: {
-                    role: 'upgrader',
-                    isNamed: true
-                }});
+        else if(upgraders.length < 2) {
+            this.spawnCreep(spawn, 'upgrader', bodyParts);
+        }
+        else if(builders.length < 2) {
+            this.spawnCreep(spawn, 'builder', bodyParts);
         }
 
-        // Visual notification when spawning
-        if(spawn.spawning) { 
+        // Show spawning visual
+        if(spawn.spawning) {
             const spawningCreep = Game.creeps[spawn.spawning.name];
             spawn.room.visual.text(
                 '🛠️' + spawningCreep.memory.role,
                 spawn.pos.x + 1, 
                 spawn.pos.y, 
-                {align: 'left', opacity: 0.8});
+                {align: 'left', opacity: 0.8}
+            );
         }
+    },
+
+    spawnCreep: function(spawn, role, body) {
+        const name = this.getNextName(role);
+        return spawn.spawnCreep(body, name, {
+            memory: {
+                role: role,
+                working: false
+            }
+        });
     }
 }; 
