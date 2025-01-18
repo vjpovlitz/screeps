@@ -6,6 +6,7 @@ const constructionManager = require('construction.manager');
 const energyManager = require('energy.manager');
 const towerManager = require('tower.manager');
 const constructionPlanner = require('construction.planner');
+const visualManager = require('visual.manager');
 
 function showStatus() {
     const room = Game.spawns['Spawn1'].room;
@@ -223,6 +224,8 @@ module.exports.loop = function() {
                 });
             }
         }
+
+        visualManager.run(room);
     }
 
     // Run creep logic
