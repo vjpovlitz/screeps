@@ -275,7 +275,7 @@ module.exports.loop = function() {
             }
         }
 
-        // Place storage in a good spot near Annapolis (your spawn)
+        // Place storage near spawn
         const spawn = Game.spawns['Spawn1'];
         if(spawn) {
             const storages = room.find(FIND_STRUCTURES, {
@@ -283,13 +283,11 @@ module.exports.loop = function() {
             });
             
             if(storages.length === 0) {
-                // Try to place storage 2 tiles away from spawn, avoiding roads
                 const storagePos = {
                     x: spawn.pos.x + 2,
                     y: spawn.pos.y + 2
                 };
                 
-                // Check if position is valid
                 if(room.lookForAt(LOOK_STRUCTURES, storagePos.x, storagePos.y).length === 0) {
                     console.log('Placing storage near Annapolis');
                     const result = room.createConstructionSite(
@@ -302,10 +300,11 @@ module.exports.loop = function() {
             }
         }
 
-        // Visualize planned structures
-        room.visual.structure(24, 13, STRUCTURE_EXTRACTOR, {opacity: 0.5});
+        // Visualize planned structures using correct visual methods
+        room.visual.circle(24, 13, {radius: 0.5, fill: '#ff0000', opacity: 0.3});
         if(spawn) {
-            room.visual.structure(spawn.pos.x + 2, spawn.pos.y + 2, STRUCTURE_STORAGE, {opacity: 0.5});
+            room.visual.circle(spawn.pos.x + 2, spawn.pos.y + 2, 
+                {radius: 0.5, fill: '#00ff00', opacity: 0.3});
         }
     }
 
