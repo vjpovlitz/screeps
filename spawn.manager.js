@@ -53,13 +53,16 @@ module.exports = {
         }
 
         const energyAvailable = spawn.room.energyAvailable;
+        let spawnAttempted = false;
+        let spawnedName = '';
         
         // Determine what to spawn
-        let result = OK;
         if(harvesters.length < 4) {
             const newName = this.getNextName();
             if(newName) {
-                result = spawn.spawnCreep(
+                spawnAttempted = true;
+                spawnedName = newName;
+                const result = spawn.spawnCreep(
                     this.getOptimalBody(energyAvailable),
                     newName,
                     {
@@ -70,12 +73,17 @@ module.exports = {
                         }
                     }
                 );
+                if(result === OK) {
+                    console.log(`Spawning new harvester: ${newName}`);
+                }
             }
         }
         else if(upgraders.length < 4) {
             const newName = this.getNextName();
             if(newName) {
-                result = spawn.spawnCreep(
+                spawnAttempted = true;
+                spawnedName = newName;
+                const result = spawn.spawnCreep(
                     this.getUpgraderBody(energyAvailable),
                     newName,
                     {
@@ -86,12 +94,17 @@ module.exports = {
                         }
                     }
                 );
+                if(result === OK) {
+                    console.log(`Spawning new upgrader: ${newName}`);
+                }
             }
         }
         else if(builders.length < 2) {
             const newName = this.getNextName();
             if(newName) {
-                result = spawn.spawnCreep(
+                spawnAttempted = true;
+                spawnedName = newName;
+                const result = spawn.spawnCreep(
                     this.getOptimalBody(energyAvailable),
                     newName,
                     {
@@ -102,11 +115,14 @@ module.exports = {
                         }
                     }
                 );
+                if(result === OK) {
+                    console.log(`Spawning new builder: ${newName}`);
+                }
             }
         }
 
-        if(result === OK) {
-            console.log(`Successfully spawned creep with name: ${newName}`);
+        if(spawnAttempted) {
+            console.log(`Spawn attempt with name: ${spawnedName}`);
         }
     },
 
