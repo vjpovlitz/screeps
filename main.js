@@ -7,253 +7,124 @@ const energyManager = require('energy.manager');
 const towerManager = require('tower.manager');
 const constructionPlanner = require('construction.planner');
 const visualManager = require('visual.manager');
+const roleBuilder = require('role.builder');
 
-function showStatus() {
-    const room = Game.spawns['Spawn1'].room;
-    console.log(`Room "${room.name}" status:
-    Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}
-    Creeps: ${Object.keys(Game.creeps).length}
-    Harvesters: ${_.filter(Game.creeps, c => c.memory.role == 'harvester').length}`);
-}
-
-function visualizeRoads(room) {
-    // Show existing roads
-    const roads = room.find(FIND_STRUCTURES, {
-        filter: s => s.structureType === STRUCTURE_ROAD
-    });
-    roads.forEach(road => {
-        room.visual.circle(road.pos, {
-            radius: 0.15,
-            fill: '#ffffff',
-            opacity: 0.3
-        });
-    });
-
-    // Show construction sites
-    const sites = room.find(FIND_CONSTRUCTION_SITES, {
-        filter: s => s.structureType === STRUCTURE_ROAD
-    });
-    sites.forEach(site => {
-        room.visual.circle(site.pos, {
-            radius: 0.15,
-            fill: '#ffff00',
-            opacity: 0.3
-        });
-    });
-}
-
-function enhancedVisuals(room) {
-    // Clear previous visuals
-    room.visual.clear();
+function showDetailedStatus() {
+    // Cache commonly used values
+    const cpu_start = Game.cpu.getUsed();
     
-    // Show all creeps and their status
-    for(let name in Game.creeps) {
-        const creep = Game.creeps[name];
+    for(let roomName in Game.rooms) {
+        const room = Game.rooms[roomName];
+        // Cache room finds to avoid repeated searches
+        const creeps = room.find(FIND_MY_CREEPS);
+        const structures = room.find(FIND_MY_STRUCTURES);
+        const sources = room.find(FIND_SOURCES);
         
-        // Creep circle and name
-        room.visual.circle(creep.pos, {
-            radius: 0.55,
-            fill: creep.memory.role == 'harvester' ? '#ffaa00' :
-                  creep.memory.role == 'upgrader' ? '#00ffaa' :
-                  '#ffffff',
-            opacity: 0.2
+        // Use cached creeps for filtering
+        const creepsByRole = _.groupBy(creeps, c => c.memory.role);
+        const harvesters = creepsByRole['harvester'] || [];
+        const upgraders = creepsByRole['upgrader'] || [];
+        const builders = creepsByRole['builder'] || [];
+
+        console.log(`\n=== Room ${roomName} Performance Report ===`);
+        
+        // Energy efficiency
+        const energyRatio = room.energyAvailable/room.energyCapacityAvailable;
+        console.log(`\nEnergy Efficiency: ${Math.floor(energyRatio * 100)}%
+    Current: ${room.energyAvailable}
+    Capacity: ${room.energyCapacityAvailable}`);
+        
+        // Controller progress rate
+        if(Memory.rooms[roomName]?.lastProgress) {
+            const progressRate = room.controller.progress - Memory.rooms[roomName].lastProgress;
+            console.log(`\nController Progress Rate: ${progressRate}/tick
+    Level: ${room.controller.level}
+    Progress: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
+        }
+        Memory.rooms[roomName] = Memory.rooms[roomName] || {};
+        Memory.rooms[roomName].lastProgress = room.controller.progress;
+
+        // Creep efficiency
+        console.log(`\nCreep Efficiency:
+    Harvesters: ${harvesters.length} (Target: 4)
+    Upgraders: ${upgraders.length} (Target: 4)
+    Builders: ${builders.length} (Target: 2)`);
+        
+        // Source utilization
+        console.log('\nSource Utilization:');
+        sources.forEach((source, index) => {
+            const harvestersAtSource = _.filter(harvesters, 
+                h => h.memory.sourceId === source.id).length;
+            const efficiency = Math.min(harvestersAtSource * 2, 10) / 10; // 2 WORK parts per harvester
+            console.log(`    Source ${index + 1}: ${Math.floor(efficiency * 100)}% utilized
+    Energy: ${source.energy}/${source.energyCapacity}
+    Harvesters: ${harvestersAtSource}/3`);
         });
 
-        // Creep name with background for better visibility
-        room.visual.text(
-            creep.name,
-            creep.pos.x,
-            creep.pos.y - 0.5,
-            {
-                color: '#ffffff',
-                font: 0.5,
-                backgroundColor: '#000000',
-                backgroundPadding: 0.2,
-                opacity: 0.8
-            }
-        );
-
-        // Role icon
-        const roleIcon = creep.memory.role == 'harvester' ? '⚡' :
-                        creep.memory.role == 'upgrader' ? '🔄' :
-                        creep.memory.role == 'builder' ? '🏗️' : '❓';
-        
-        room.visual.text(
-            roleIcon,
-            creep.pos.x,
-            creep.pos.y + 0.25,
-            {font: 0.5}
-        );
+        // Performance metrics
+        const cpu_end = Game.cpu.getUsed();
+        console.log(`\nPerformance Metrics:
+    CPU Usage: ${(cpu_end - cpu_start).toFixed(2)} CPU
+    Creeps per CPU: ${(creeps.length / (cpu_end - cpu_start)).toFixed(2)}
+    Memory Usage: ${(RawMemory.get().length / 1024).toFixed(2)} KB`);
     }
-
-    // Energy source information
-    room.find(FIND_SOURCES).forEach(source => {
-        const harvestersHere = _.filter(Game.creeps, c => 
-            c.memory.sourceId === source.id
-        ).length;
-        
-        // Energy bar
-        const energyPercent = source.energy / source.energyCapacity;
-        room.visual.rect(
-            source.pos.x - 0.5,
-            source.pos.y - 1,
-            1,
-            0.1,
-            {fill: '#555555'}
-        );
-        room.visual.rect(
-            source.pos.x - 0.5,
-            source.pos.y - 1,
-            energyPercent,
-            0.1,
-            {fill: '#ffaa00'}
-        );
-
-        // Source stats
-        room.visual.text(
-            `⚡ ${source.energy}/${source.energyCapacity}\n👥 ${harvestersHere}`,
-            source.pos.x,
-            source.pos.y - 1.2,
-            {
-                align: 'center',
-                opacity: 0.8,
-                backgroundColor: '#000000',
-                backgroundPadding: 0.2
-            }
-        );
-    });
-
-    // Show Maryland town names for sources
-    room.find(FIND_SOURCES).forEach((source, index) => {
-        const townName = spawnManager.townNames.sources[index] || 'Unknown Town';
-        room.visual.text(
-            `📍 ${townName}`,
-            source.pos.x,
-            source.pos.y - 1.5,
-            {
-                color: '#ffffff',
-                backgroundColor: '#000000',
-                backgroundPadding: 0.2,
-                opacity: 0.8,
-                font: 0.6
-            }
-        );
-    });
-
-    // Show Annapolis for spawn
-    const spawn = room.find(FIND_MY_SPAWNS)[0];
-    if(spawn) {
-        room.visual.text(
-            `🏛️ ${spawnManager.townNames.spawn}`,
-            spawn.pos.x,
-            spawn.pos.y - 1,
-            {
-                color: '#ffffff',
-                backgroundColor: '#000000',
-                backgroundPadding: 0.2,
-                opacity: 0.8,
-                font: 0.6
-            }
-        );
-    }
-
-    // Room status dashboard
-    const dashboard = [
-        `Room: ${room.name}`,
-        `Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
-        `Creeps: ${Object.keys(Game.creeps).length}`,
-        `Harvesters: ${_.filter(Game.creeps, c => c.memory.role == 'harvester').length}`,
-        `Upgraders: ${_.filter(Game.creeps, c => c.memory.role == 'upgrader').length}`,
-        `Builders: ${_.filter(Game.creeps, c => c.memory.role == 'builder').length}`
-    ].join('\n');
-
-    room.visual.text(
-        dashboard,
-        1,
-        1,
-        {
-            align: 'left',
-            opacity: 0.8,
-            backgroundColor: '#000000',
-            backgroundPadding: 0.2
-        }
-    );
 }
 
 module.exports.loop = function() {
-    // Clear memory of dead creeps
-    for(let name in Memory.creeps) {
-        if(!Game.creeps[name]) {
-            delete Memory.creeps[name];
-            console.log('Clearing non-existing creep memory:', name);
-        }
-    }
+    // Use CPU profiling
+    const mainLoopStart = Game.cpu.getUsed();
 
-    // Run spawn logic
-    spawnManager.run();
-
-    // Run creep logic and add visualizations
-    for(let roomName in Game.rooms) {
-        const room = Game.rooms[roomName];
-        
-        // Add persistent visualizations
-        enhancedVisuals(room);
-        visualizeRoads(room);
-        
-        // Show room energy status
-        room.visual.text(
-            `Room Energy: ${room.energyAvailable}/${room.energyCapacityAvailable}`,
-            1, 1,
-            {align: 'left', opacity: 0.8}
-        );
-
-        // Add future tower visualization
-        if(room.controller.level < 3) {
-            const spawn = room.find(FIND_MY_SPAWNS)[0];
-            if(spawn) {
-                room.visual.text('🗼 Future Tower (RCL 3)',
-                    spawn.pos.x + 2, spawn.pos.y + 1,
-                    {color: '#ff0000', stroke: '#000000', strokeWidth: 0.2, font: 0.5}
-                );
-                room.visual.circle(spawn.pos.x + 2, spawn.pos.y + 2, {
-                    radius: 5,
-                    fill: 'transparent',
-                    stroke: '#ff0000',
-                    strokeWidth: 0.2,
-                    opacity: 0.3
-                });
+    // Batch memory cleanup
+    if(Game.time % 100 === 0) {
+        for(let name in Memory.creeps) {
+            if(!Game.creeps[name]) {
+                delete Memory.creeps[name];
             }
         }
+    }
 
+    // Cache room data
+    const rooms = Game.rooms;
+    for(let roomName in rooms) {
+        const room = rooms[roomName];
+        
+        // Run managers with CPU tracking
+        const spawnCPUStart = Game.cpu.getUsed();
+        spawnManager.run();
+        const visualCPUStart = Game.cpu.getUsed();
         visualManager.run(room);
-    }
-
-    // Run creep logic
-    for(let name in Game.creeps) {
-        const creep = Game.creeps[name];
-        if(creep.memory.role == 'harvester') {
-            roleHarvester.run(creep);
-        }
-        if(creep.memory.role == 'upgrader') {
-            roleUpgrader.run(creep);
-        }
-
-    }
-
-    // Run status report every 10 ticks
-    if(Game.time % 10 === 0) {
-        showStatus();
-    }
-
-    // Force road planning every 100 ticks
-    if(Game.time % 100 === 0) {
-        for(let roomName in Game.rooms) {
-            constructionManager.planRoads(Game.rooms[roomName]);
+        
+        if(Game.time % 30 === 0) {
+            console.log(`Manager CPU Usage:
+    Spawn: ${(visualCPUStart - spawnCPUStart).toFixed(2)}
+    Visual: ${(Game.cpu.getUsed() - visualCPUStart).toFixed(2)}`);
         }
     }
 
-    // Run energy management
-    for(let roomName in Game.rooms) {
-        energyManager.run(Game.rooms[roomName]);
+    // Batch process creeps
+    const creeps = Game.creeps;
+    const creepCPUStart = Game.cpu.getUsed();
+    for(let name in creeps) {
+        const creep = creeps[name];
+        // Use switch for faster role checking
+        switch(creep.memory.role) {
+            case 'harvester':
+                roleHarvester.run(creep);
+                break;
+            case 'upgrader':
+                roleUpgrader.run(creep);
+                break;
+            case 'builder':
+                roleBuilder.run(creep);
+                break;
+        }
+    }
+
+    // Performance reporting
+    if(Game.time % 30 === 0) {
+        showDetailedStatus();
+        const totalCPU = Game.cpu.getUsed() - mainLoopStart;
+        console.log(`\nTotal CPU Usage: ${totalCPU.toFixed(2)} (${(totalCPU/Game.cpu.limit * 100).toFixed(2)}% of limit)
+Creep CPU: ${(Game.cpu.getUsed() - creepCPUStart).toFixed(2)}`);
     }
 }; 
