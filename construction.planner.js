@@ -28,17 +28,12 @@ module.exports = {
         ]
     },
 
-    TOWER_POSITIONS: [
-        {x: 2, y: 2},   // First tower - existing position
-        {x: -2, y: -2}  // Second tower - opposite corner for better coverage
-    ],
-
     MARYLAND_LANDMARKS: {
         towers: [
-            { name: "Fort McHenry", pos: {x: 2, y: 2} },          // Original position by spawn
-            { name: "Fort Washington", pos: {x: -2, y: -12} },     // Up by North Beach
-            { name: "Fort Baltimore", pos: {x: 6, y: -4} },        // Near Baltimore harvester
-            { name: "Fort Meade", pos: {x: -8, y: -6} }           // At the chokepoint
+            { name: "Fort McHenry", pos: {x: 3, y: 3} },          // Better defensive position near spawn
+            { name: "Fort Washington", pos: {x: -4, y: -14} },     // Up by Fairhaven/North Beach for mineral defense
+            { name: "Fort Baltimore", pos: {x: -2, y: -8} },       // Between Trevor and Jocelyn on the road
+            { name: "Fort Meade", pos: {x: -8, y: -6} }           // Keeping this position at the chokepoint
         ],
         extensions: [
             "Fairhaven", "North Beach", "Deale", "Shady Side", 
