@@ -141,7 +141,10 @@ module.exports = {
     },
 
     planTowers: function(room, spawn) {
-        if(!spawn || room.controller.level < 3) return;
+        if(!spawn || room.controller.level < 3) {
+            console.log('⚠️ Cannot build towers yet - need RCL 3');
+            return;
+        }
 
         // Sort towers by priority (Fort McHenry first)
         const prioritizedTowers = [...this.MARYLAND_LANDMARKS.towers].sort((a, b) => {
@@ -157,6 +160,9 @@ module.exports = {
                 y: spawn.pos.y + tower.pos.y
             };
 
+            // Debug position
+            console.log(`🔍 Checking ${tower.name} position at (${towerPos.x}, ${towerPos.y})`);
+
             const existingTower = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y)
                 .find(s => s.structureType === STRUCTURE_TOWER);
             
@@ -171,16 +177,16 @@ module.exports = {
 
                 if(activeTowerSites.length === 0) {
                     const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+                    console.log(`🏗️ Attempting to create ${tower.name} at (${towerPos.x},${towerPos.y}) - Result: ${result}`);
                     if(result === OK) {
-                        console.log(`🏗️ Planning priority tower ${tower.name} at (${towerPos.x},${towerPos.y})`);
-                        break; // Only create one site at a time
+                        console.log(`✅ Successfully planned ${tower.name}`);
+                        break;
+                    } else {
+                        console.log(`❌ Failed to plan ${tower.name} - Error code: ${result}`);
                     }
                 }
             }
         }
-
-        // Enhanced visualization with progress
-        this.visualizeTowerProgress(room, spawn);
     },
 
     visualizeTowerProgress: function(room, spawn) {

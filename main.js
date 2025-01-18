@@ -123,9 +123,10 @@ function showDetailedStatus() {
         });
         
         if(towerSites.length > 0) {
-            console.log('\nTower Construction Priority:');
+            console.log('\n🗼 Tower Construction Priority:');
             towerSites.forEach(site => {
-                const towerName = getTowerName(site.pos, spawn.pos);
+                const pos = {x: site.pos.x - spawn.pos.x, y: site.pos.y - spawn.pos.y};
+                const towerName = getTowerNameFromPos(pos);
                 console.log(`🏗️ ${towerName}: ${Math.floor((site.progress/site.progressTotal) * 100)}% complete`);
                 
                 // Show assigned builders
@@ -134,35 +135,35 @@ function showDetailedStatus() {
                     creep.memory.targetId === site.id
                 );
                 if(assignedBuilders.length > 0) {
-                    console.log(`   Builders: ${assignedBuilders.map(b => b.memory.customName).join(', ')}`);
+                    console.log(`   👷 Builders: ${assignedBuilders.map(b => b.memory.customName).join(', ')}`);
                 }
             });
         }
 
-        // Extensions status
+        // Extensions status (using spawn manager's townNames)
         const extensions = room.find(FIND_MY_STRUCTURES, {
             filter: s => s.structureType === STRUCTURE_EXTENSION
         });
+        
         if(extensions.length > 0) {
-            console.log('\nExtensions:');
+            console.log('\n🏠 Extensions:');
             extensions.forEach((ext, index) => {
-                const name = extensionNames[index] || `Extension${index + 1}`;
+                const name = spawnManager.townNames.extensions[index] || `Extension${index + 1}`;
                 console.log(`${name}: ${ext.store.getUsedCapacity(RESOURCE_ENERGY)}/${ext.store.getCapacity(RESOURCE_ENERGY)}`);
             });
         }
 
-        // Construction Progress with names for extensions
+        // Construction Progress
         const sites = room.find(FIND_CONSTRUCTION_SITES);
         if(sites.length > 0) {
-            console.log('\nConstruction Progress:');
+            console.log('\n🚧 Construction Progress:');
             sites.forEach(site => {
+                const progress = Math.floor((site.progress/site.progressTotal) * 100);
                 if(site.structureType === STRUCTURE_EXTENSION) {
-                    const name = extensionNames[extensions.length] || `Extension${extensions.length + 1}`;
-                    console.log(`${name}: ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
-                } else if(site.structureType === STRUCTURE_TOWER) {
-                    console.log(`Tower: ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
+                    const name = spawnManager.townNames.extensions[extensions.length] || `Extension${extensions.length + 1}`;
+                    console.log(`${name}: ${progress}%`);
                 } else {
-                    console.log(`${site.structureType}: ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
+                    console.log(`${site.structureType}: ${progress}%`);
                 }
             });
         }
@@ -170,14 +171,13 @@ function showDetailedStatus() {
         // Creep summary
         const creeps = room.find(FIND_MY_CREEPS);
         const roles = _.groupBy(creeps, c => c.memory.role);
-        console.log('\nCreep Count:');
+        console.log('\n👥 Creep Count:');
         for(let role in roles) {
             console.log(`${role}: ${roles[role].length}`);
         }
 
-        // Detailed creep names (only every 100 ticks)
         if(showCreepDetails) {
-            console.log('\nCreep Details:');
+            console.log('\n🔍 Creep Details:');
             for(let role in roles) {
                 console.log(`${role}: ${roles[role].map(c => c.memory.customName).join(', ')}`);
             }
@@ -185,18 +185,11 @@ function showDetailedStatus() {
     }
 }
 
-function getTowerName(pos, spawnPos) {
-    // Match position to MARYLAND_LANDMARKS tower positions
+function getTowerNameFromPos(pos) {
     const landmarks = require('construction.planner').MARYLAND_LANDMARKS;
-    const relativePos = {
-        x: pos.x - spawnPos.x,
-        y: pos.y - spawnPos.y
-    };
-    
     const tower = landmarks.towers.find(t => 
-        t.pos.x === relativePos.x && t.pos.y === relativePos.y
+        t.pos.x === pos.x && t.pos.y === pos.y
     );
-    
     return tower ? tower.name : 'Unknown Tower';
 }
 
