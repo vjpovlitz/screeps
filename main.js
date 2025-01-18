@@ -103,13 +103,15 @@ function visualizeRoads(room) {
 }
 
 function showDetailedStatus() {
-    // Only show creep names every 100 ticks instead of every 30
     const showCreepDetails = Game.time % 100 === 0;
     
     for(let roomName in Game.rooms) {
         const room = Game.rooms[roomName];
         const creeps = room.find(FIND_MY_CREEPS);
         const sites = room.find(FIND_CONSTRUCTION_SITES);
+        const extensions = room.find(FIND_MY_STRUCTURES, {
+            filter: s => s.structureType === STRUCTURE_EXTENSION
+        });
         
         console.log(`\n=== Room ${roomName} Status ===`);
         
@@ -117,18 +119,32 @@ function showDetailedStatus() {
         console.log(`Energy: ${room.energyAvailable}/${room.energyCapacityAvailable} (${Math.floor((room.energyAvailable/room.energyCapacityAvailable) * 100)}%)`);
         console.log(`Controller Level ${room.controller.level}: ${Math.floor((room.controller.progress/room.controller.progressTotal) * 100)}%`);
         
-        // Construction Progress
-        if(sites.length > 0) {
-            console.log('\nConstruction Progress:');
-            const sitesByType = _.groupBy(sites, 'structureType');
-            for(let type in sitesByType) {
-                const typeProgress = sitesByType[type].reduce((sum, site) => sum + site.progress, 0);
-                const typeTotal = sitesByType[type].reduce((sum, site) => sum + site.progressTotal, 0);
-                console.log(`${type}: ${Math.floor((typeProgress/typeTotal) * 100)}% (${sitesByType[type].length} sites)`);
-            }
+        // Extensions status
+        const extensionNames = ['Bethesda', 'Silver Spring', 'Gaithersburg', 'Bowie', 'Hagerstown'];
+        if(extensions.length > 0) {
+            console.log('\nExtensions:');
+            extensions.forEach((ext, index) => {
+                const name = extensionNames[index] || `Extension${index + 1}`;
+                console.log(`${name}: ${ext.store.getUsedCapacity(RESOURCE_ENERGY)}/${ext.store.getCapacity(RESOURCE_ENERGY)}`);
+            });
         }
 
-        // Creep summary (always show)
+        // Construction Progress with names for extensions
+        if(sites.length > 0) {
+            console.log('\nConstruction Progress:');
+            sites.forEach(site => {
+                if(site.structureType === STRUCTURE_EXTENSION) {
+                    const name = extensionNames[extensions.length] || `Extension${extensions.length + 1}`;
+                    console.log(`${name}: ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
+                } else if(site.structureType === STRUCTURE_TOWER) {
+                    console.log(`Tower: ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
+                } else {
+                    console.log(`${site.structureType}: ${Math.floor((site.progress/site.progressTotal) * 100)}%`);
+                }
+            });
+        }
+
+        // Creep summary
         const roles = _.groupBy(creeps, c => c.memory.role);
         console.log('\nCreep Count:');
         for(let role in roles) {

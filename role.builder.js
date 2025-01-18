@@ -52,15 +52,21 @@ module.exports = {
     },
 
     prioritizeConstructionSites: function(sites) {
-        // Priority order: Spawn > Extension > Tower > Storage > Road > Container
+        // Updated priority order: Tower > Extension > Spawn > Storage > Road > Container
         const priority = {
-            'spawn': 1,
+            'tower': 1,
             'extension': 2,
-            'tower': 3,
+            'spawn': 3,
             'storage': 4,
             'road': 5,
             'container': 6
         };
+
+        // Extension names from Maryland cities
+        const extensionNames = [
+            'Bethesda', 'Silver Spring', 'Gaithersburg', 
+            'Bowie', 'Hagerstown', 'Rockville', 'Laurel'
+        ];
 
         return sites.sort((a, b) => {
             // First sort by priority
@@ -70,7 +76,7 @@ module.exports = {
             // Then by progress percentage
             const aProgress = a.progress / a.progressTotal;
             const bProgress = b.progress / b.progressTotal;
-            return bProgress - aProgress; // Higher progress first
+            return bProgress - aProgress;
         });
     },
 
