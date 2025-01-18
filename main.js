@@ -3,6 +3,7 @@ const roleHarvester = require('role.harvester');
 const spawnManager = require('spawn.manager');
 const roleUpgrader = require('role.upgrader');
 const constructionManager = require('construction.manager');
+const energyManager = require('energy.manager');
 
 function showStatus() {
     // Energy status
@@ -179,5 +180,10 @@ module.exports.loop = function() {
                 Math.floor(roads.reduce((sum, road) => sum + (road.hits / road.hitsMax * 100), 0) / roads.length)
             }%`);
         }
+    }
+
+    // Run energy management
+    for(let roomName in Game.rooms) {
+        energyManager.run(Game.rooms[roomName]);
     }
 } 
