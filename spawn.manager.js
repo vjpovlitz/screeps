@@ -9,14 +9,24 @@ module.exports = {
     namePool: ['Vinson', 'Sean', 'Lenny', 'Cam', 'Kimi', 'Dave', 'Smokey'],
     
     getNextName: function(role) {
-        // Get all existing creep names
-        const existingNames = Object.values(Game.creeps).map(creep => creep.name);
+        // Get currently used names
+        const usedNames = new Set(Object.values(Game.creeps).map(creep => creep.name));
         
-        // Find first available name from pool
-        const availableName = this.namePool.find(name => !existingNames.includes(name));
+        // First, try to find an unused name from our pool
+        for (let name of this.namePool) {
+            if (!usedNames.has(name)) {
+                return name;
+            }
+        }
         
-        // If all pool names are taken, use timestamp naming
-        return availableName || `${role}${Game.time}`;
+        // If all names are used, append a number to the first available name
+        for (let name of this.namePool) {
+            let counter = 1;
+            while (usedNames.has(`${name}_${counter}`)) {
+                counter++;
+            }
+            return `${name}_${counter}`;
+        }
     },
 
     run: function() {
