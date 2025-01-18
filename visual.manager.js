@@ -104,6 +104,37 @@ module.exports = {
             perfTextX, perfY + 3.8,
             {align: 'center', color: '#ff0000', font: 0.7}
         );
+
+        // Add creep status visualization
+        room.find(FIND_MY_CREEPS).forEach(creep => {
+            let statusText = `${creep.name} (${creep.memory.role})`;
+            let actionText = '';
+            
+            // Determine action text based on creep memory and state
+            if(creep.memory.building) {
+                const target = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+                actionText = target ? `🏗️ Building ${target.structureType}` : '🔍 Seeking site';
+            } else if(creep.memory.upgrading) {
+                actionText = '⚡ Upgrading';
+            } else if(creep.store.getFreeCapacity() > 0) {
+                actionText = '📥 Harvesting';
+            } else {
+                actionText = '📦 Full';
+            }
+
+            // Draw status above creep
+            room.visual.text(
+                statusText,
+                creep.pos.x, creep.pos.y - 0.8,
+                {color: '#ffffff', font: 0.4, stroke: '#000000', strokeWidth: 0.2}
+            );
+            
+            room.visual.text(
+                actionText,
+                creep.pos.x, creep.pos.y - 0.4,
+                {color: '#ffff00', font: 0.3, stroke: '#000000', strokeWidth: 0.2}
+            );
+        });
     },
 
     getTypeIcon: function(type) {
