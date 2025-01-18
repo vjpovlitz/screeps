@@ -20,14 +20,19 @@ module.exports = {
             
             if(towerSites.length > 0) {
                 // Find closest tower site
-                const closestTower = creep.pos.findClosestByPath(towerSites);
-                if(creep.build(closestTower) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(closestTower, {
+                const target = towerSites[0]; // Will be Fort McHenry due to priority planning
+                if(creep.build(target) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, {
                         visualizePathStyle: {stroke: '#ff0000'},
                         reusePath: 5
                     });
                 }
-                creep.say('🗼 tower!');
+                // Update status visualization
+                creep.room.visual.text(
+                    `🏗️ Building ${target.structureType}`,
+                    creep.pos.x, creep.pos.y - 1,
+                    {color: '#ffaa00', stroke: '#000000', strokeWidth: 0.2, font: 0.4}
+                );
                 return;
             }
 

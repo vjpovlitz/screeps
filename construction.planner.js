@@ -143,41 +143,47 @@ module.exports = {
     planTowers: function(room, spawn) {
         if(!spawn || room.controller.level < 3) return;
 
-        // Try to build all possible towers
-        this.MARYLAND_LANDMARKS.towers.forEach(tower => {
+        // Sort towers by priority (Fort McHenry first)
+        const prioritizedTowers = [...this.MARYLAND_LANDMARKS.towers].sort((a, b) => {
+            if(a.name === "Fort McHenry") return -1;
+            if(b.name === "Fort McHenry") return 1;
+            return 0;
+        });
+
+        // Try to build towers in priority order
+        for(let tower of prioritizedTowers) {
             const towerPos = {
                 x: spawn.pos.x + tower.pos.x,
                 y: spawn.pos.y + tower.pos.y
             };
 
-            // Check if tower already exists at this position
             const existingTower = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y)
                 .find(s => s.structureType === STRUCTURE_TOWER);
             
-            // Check if construction site already exists
             const existingSite = room.lookForAt(LOOK_CONSTRUCTION_SITES, towerPos.x, towerPos.y)
                 .find(s => s.structureType === STRUCTURE_TOWER);
 
             if(!existingTower && !existingSite) {
-                // Clear any roads or other structures
-                const structures = room.lookForAt(LOOK_STRUCTURES, towerPos.x, towerPos.y);
-                structures.forEach(structure => {
-                    if(structure.structureType === STRUCTURE_ROAD) {
-                        structure.destroy();
-                    }
+                // Only create one tower construction site at a time
+                const activeTowerSites = room.find(FIND_CONSTRUCTION_SITES, {
+                    filter: site => site.structureType === STRUCTURE_TOWER
                 });
 
-                // Create the tower construction site
-                const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
-                if(result === OK) {
-                    console.log(`🏗️ Planning tower ${tower.name} at (${towerPos.x},${towerPos.y})`);
-                } else {
-                    console.log(`⚠️ Failed to plan ${tower.name} at (${towerPos.x},${towerPos.y}), result: ${result}`);
+                if(activeTowerSites.length === 0) {
+                    const result = room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+                    if(result === OK) {
+                        console.log(`🏗️ Planning priority tower ${tower.name} at (${towerPos.x},${towerPos.y})`);
+                        break; // Only create one site at a time
+                    }
                 }
             }
-        });
+        }
 
-        // Visualize all planned and existing towers
+        // Enhanced visualization with progress
+        this.visualizeTowerProgress(room, spawn);
+    },
+
+    visualizeTowerProgress: function(room, spawn) {
         this.MARYLAND_LANDMARKS.towers.forEach(tower => {
             const towerX = spawn.pos.x + tower.pos.x;
             const towerY = spawn.pos.y + tower.pos.y;
@@ -188,20 +194,24 @@ module.exports = {
                 .find(s => s.structureType === STRUCTURE_TOWER);
 
             let color = '#ff0000';  // Red for planned
+            let status = '📍 Planned';
+            
             if(existingTower) {
                 color = '#00ff00';  // Green for built
+                status = '✅ Built';
             } else if(constructionSite) {
                 color = '#ffaa00';  // Orange for under construction
+                const progress = Math.floor((constructionSite.progress / constructionSite.progressTotal) * 100);
+                status = `🏗️ ${progress}%`;
             }
 
-            // Show tower name and range
+            // Show tower name, status and range
             room.visual.text(
-                `🗼 ${tower.name}`,
+                `🗼 ${tower.name}\n${status}`,
                 towerX, towerY - 1,
                 {color: color, stroke: '#000000', strokeWidth: 0.2, font: 0.5}
             );
 
-            // Show coverage radius
             room.visual.circle(towerX, towerY, {
                 radius: 5,
                 fill: 'transparent',
