@@ -29,100 +29,102 @@ module.exports = {
         const spawn = Game.spawns['Spawn1'];
         if(!spawn) return;
 
-        // FIXED: Name Assignment - Only assign if no custom name exists
-        for(let name in Game.creeps) {
-            const creep = Game.creeps[name];
-            if(!creep.memory.customName || creep.memory.customName === 'undefined') {
-                const availableName = this.getNextName();
-                if(availableName) {
-                    creep.memory.customName = availableName;
-                    creep.memory.nameAssigned = true; // Add flag to prevent reassignment
-                    console.log(`🏷️ Initial name assignment: ${availableName} to ${creep.name} (${creep.memory.role})`);
-                }
-            }
-        }
-
-        // Debug output every 15 ticks
-        if(Game.time % 15 === 0) {
-            console.log('=== Current Creep Names ===');
-            for(let name in Game.creeps) {
-                const creep = Game.creeps[name];
-                console.log(`${creep.name} => ${creep.memory.customName} (${creep.memory.role})`);
-            }
-        }
-
-        // Spawn logic
+        // Get current creep counts
         const harvesters = _.filter(Game.creeps, creep => creep.memory.role === 'harvester');
         const upgraders = _.filter(Game.creeps, creep => creep.memory.role === 'upgrader');
         const builders = _.filter(Game.creeps, creep => creep.memory.role === 'builder');
 
+        // Adjusted minimum counts
+        const minCreeps = {
+            harvester: 4,
+            upgrader: 2,  // Reduced from 4 to 2
+            builder: 3    // Increased from 2 to 3
+        };
+
+        // Debug output every 30 ticks
+        if(Game.time % 30 === 0) {
+            console.log(`Creep Balance - H:${harvesters.length}/${minCreeps.harvester} U:${upgraders.length}/${minCreeps.upgrader} B:${builders.length}/${minCreeps.builder}`);
+        }
+
+        // Don't spawn if already spawning
         if(spawn.spawning) {
             this.showSpawningVisual(spawn);
             return;
         }
 
-        // FIXED: Spawning with persistent names
         const energyAvailable = spawn.room.energyAvailable;
-        if(harvesters.length < 4) {
-            const newName = this.getNextName();
-            if(newName) {
-                const result = spawn.spawnCreep(
-                    this.getOptimalBody(energyAvailable),
-                    newName, // Use the custom name directly
-                    {
-                        memory: {
-                            role: 'harvester',
-                            working: false,
-                            customName: newName,
-                            nameAssigned: true
-                        }
-                    }
-                );
-                if(result === OK) {
-                    console.log(`Spawned new harvester: ${newName}`);
-                }
-            }
+        
+        // Spawn priority logic
+        if(harvesters.length < minCreeps.harvester) {
+            this.spawnCreep(spawn, 'harvester', energyAvailable);
         }
-        else if(upgraders.length < 4) {
-            const newName = this.getNextName();
-            if(newName) {
-                const result = spawn.spawnCreep(
-                    this.getUpgraderBody(energyAvailable),
-                    newName,
-                    {
-                        memory: {
-                            role: 'upgrader',
-                            working: false,
-                            customName: newName,
-                            nameAssigned: true
-                        }
-                    }
-                );
-                if(result === OK) {
-                    console.log(`Spawned new upgrader: ${newName}`);
-                }
-            }
+        else if(builders.length < minCreeps.builder) {  // Prioritize builders over upgraders
+            this.spawnCreep(spawn, 'builder', energyAvailable);
         }
-        else if(builders.length < 2) {
-            const newName = this.getNextName();
-            if(newName) {
-                const result = spawn.spawnCreep(
-                    this.getOptimalBody(energyAvailable),
-                    newName,
-                    {
-                        memory: {
-                            role: 'builder',
-                            working: false,
-                            customName: newName,
-                            nameAssigned: true
-                        }
-                    }
-                );
-                if(result === OK) {
-                    console.log(`Spawned new builder: ${newName}`);
-                }
-            }
+        else if(upgraders.length < minCreeps.upgrader) {
+            this.spawnCreep(spawn, 'upgrader', energyAvailable);
         }
+
+        // If we have construction sites, spawn extra builders
+        const constructionSites = spawn.room.find(FIND_CONSTRUCTION_SITES);
+        if(constructionSites.length > 10 && builders.length < 4 && 
+           harvesters.length >= minCreeps.harvester) {
+            this.spawnCreep(spawn, 'builder', energyAvailable);
+        }
+
+        // If we're near RCL upgrade, add an upgrader
+        const controller = spawn.room.controller;
+        if(controller && controller.progress > controller.progressTotal * 0.8 &&
+           upgraders.length < 3 && harvesters.length >= minCreeps.harvester) {
+            this.spawnCreep(spawn, 'upgrader', energyAvailable);
+        }
+    },
+
+    spawnCreep: function(spawn, role, energy) {
+        const newName = this.getNextName();
+        if(!newName) return;
+
+        let body;
+        switch(role) {
+            case 'builder':
+                body = this.getBuilderBody(energy);
+                break;
+            case 'upgrader':
+                body = this.getUpgraderBody(energy);
+                break;
+            default:
+                body = this.getOptimalBody(energy);
+        }
+
+        const result = spawn.spawnCreep(body, newName, {
+            memory: {
+                role: role,
+                working: false,
+                customName: newName
+            }
+        });
+
+        if(result === OK) {
+            console.log(`Spawning new ${role}: ${newName}`);
+        }
+    },
+
+    getBuilderBody: function(energy) {
+        if(energy >= 800) {
+            return [WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
+        } else if(energy >= 550) {
+            return [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
+        }
+        return [WORK, CARRY, MOVE, MOVE];
+    },
+
+    getUpgraderBody: function(energy) {
+        if(energy >= 800) {
+            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+        } else if(energy >= 550) {
+            return [WORK, WORK, CARRY, CARRY, MOVE, MOVE];
+        }
+        return [WORK, CARRY, MOVE];
     },
 
     getAvailableNames: function() {
@@ -155,15 +157,6 @@ module.exports = {
     getOptimalBody: function(energy) {
         if(energy >= 800) {
             return [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE];
-        } else if(energy >= 550) {
-            return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
-        }
-        return [WORK, WORK, CARRY, MOVE];
-    },
-
-    getUpgraderBody: function(energy) {
-        if(energy >= 800) {
-            return [WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE];
         } else if(energy >= 550) {
             return [WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE];
         }
