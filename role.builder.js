@@ -2,78 +2,45 @@ const movementHelper = require('movement.helper');
 
 module.exports = {
     run: function(creep) {
-        // State management
-        if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {
+        // Switch states if full or empty
+        if(creep.memory.building && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.building = false;
-            creep.say('🔄');
+            creep.say('🔄 harvest');
         }
-        if(!creep.memory.building && creep.store.getFreeCapacity() == 0) {
+        if(!creep.memory.building && creep.store.getFreeCapacity() === 0) {
             creep.memory.building = true;
-            creep.say('🚧');
+            creep.say('🏗️ build');
         }
 
         if(creep.memory.building) {
-            // Get all construction sites
-            const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
+            // First, look specifically for tower construction sites
+            const towerSites = creep.room.find(FIND_CONSTRUCTION_SITES, {
+                filter: site => site.structureType === STRUCTURE_TOWER
+            });
             
-            if(sites.length) {
-                // Sort sites by priority and progress
-                const prioritizedSites = this.prioritizeConstructionSites(sites);
-                const target = prioritizedSites[0];
-
-                // Log construction progress every 50 ticks
-                if(Game.time % 50 === 0) {
-                    console.log(`🏗️ Building ${target.structureType}: ${Math.floor((target.progress/target.progressTotal) * 100)}% complete`);
+            if(towerSites.length > 0) {
+                if(creep.build(towerSites[0]) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(towerSites[0], {visualizePathStyle: {stroke: '#ff0000'}});
                 }
+                creep.say('🗼 tower');
+                return;
+            }
 
-                if(creep.build(target) == ERR_NOT_IN_RANGE) {
-                    movementHelper.moveOnRoad(creep, target);
-                }
-            } else {
-                // Repair logic - prioritize roads and containers
-                const repairTarget = this.findRepairTarget(creep);
-                if(repairTarget) {
-                    if(creep.repair(repairTarget) == ERR_NOT_IN_RANGE) {
-                        movementHelper.moveOnRoad(creep, repairTarget);
-                    }
+            // If no tower sites, look for other construction sites
+            const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
+            if(sites.length > 0) {
+                if(creep.build(sites[0]) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(sites[0], {visualizePathStyle: {stroke: '#ffffff'}});
                 }
             }
         } else {
-            // Harvesting logic
+            // Get energy from closest source
             const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-            if(source && creep.harvest(source) == ERR_NOT_IN_RANGE) {
-                movementHelper.moveOnRoad(creep, source);
+            if(source) {
+                if(creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, {visualizePathStyle: {stroke: '#ffaa00'}});
+                }
             }
         }
-    },
-
-    prioritizeConstructionSites: function(sites) {
-        // Simplified priority system
-        if(sites.length === 0) return [];
-        
-        // Find tower sites first
-        const towerSites = sites.filter(site => site.structureType === STRUCTURE_TOWER);
-        if(towerSites.length > 0) return towerSites;
-        
-        // Then extensions
-        const extensionSites = sites.filter(site => site.structureType === STRUCTURE_EXTENSION);
-        if(extensionSites.length > 0) return extensionSites;
-        
-        // Then everything else
-        return sites;
-    },
-
-    findRepairTarget: function(creep) {
-        return creep.pos.findClosestByPath(FIND_STRUCTURES, {
-            filter: structure => {
-                if(structure.structureType === STRUCTURE_ROAD) {
-                    return structure.hits < structure.hitsMax * 0.7;
-                }
-                if(structure.structureType === STRUCTURE_CONTAINER) {
-                    return structure.hits < structure.hitsMax * 0.8;
-                }
-                return false;
-            }
-        });
     }
 }; 
