@@ -71,6 +71,15 @@ module.exports = {
         };
     },
 
+    assignSources: function(creep) {
+        if (!creep.memory.sourceId) {
+            const bestSource = this.getOptimalSource(creep);
+            if (bestSource) {
+                creep.memory.sourceId = bestSource.id;
+            }
+        }
+    },
+
     getOptimalSource: function(creep) {
         const sources = creep.room.find(FIND_SOURCES);
         let bestSource = null;

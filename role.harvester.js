@@ -3,14 +3,17 @@ const constructionManager = require('construction.manager');
 module.exports = {
     run: function(creep) {
         // Assign source if not already assigned
-        constructionManager.assignSources(creep);
+        if (!creep.memory.sourceId) {
+            const sources = creep.room.find(FIND_SOURCES);
+            creep.memory.sourceId = sources[0].id;  // Simple assignment for now
+        }
         
         if(creep.store.getFreeCapacity() > 0) {
             const source = Game.getObjectById(creep.memory.sourceId);
             if(creep.harvest(source) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(source, {
                     visualizePathStyle: {stroke: '#ffaa00'},
-                    reusePath: 20  // Reuse path for 20 ticks for efficiency
+                    reusePath: 20
                 });
             }
         }
