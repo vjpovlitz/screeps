@@ -13,6 +13,32 @@ function showStatus() {
     Harvesters: ${_.filter(Game.creeps, c => c.memory.role == 'harvester').length}`);
 }
 
+function visualizeRoads(room) {
+    // Show existing roads
+    const roads = room.find(FIND_STRUCTURES, {
+        filter: s => s.structureType === STRUCTURE_ROAD
+    });
+    roads.forEach(road => {
+        room.visual.circle(road.pos, {
+            radius: 0.15,
+            fill: '#ffffff',
+            opacity: 0.3
+        });
+    });
+
+    // Show construction sites
+    const sites = room.find(FIND_CONSTRUCTION_SITES, {
+        filter: s => s.structureType === STRUCTURE_ROAD
+    });
+    sites.forEach(site => {
+        room.visual.circle(site.pos, {
+            radius: 0.15,
+            fill: '#ffff00',
+            opacity: 0.3
+        });
+    });
+}
+
 module.exports.loop = function() {
     // Clear memory of dead creeps
     for(let name in Memory.creeps) {
@@ -41,8 +67,13 @@ module.exports.loop = function() {
         showStatus();
     }
 
-    // Plan roads every 1000 ticks
-    if(Game.time % 1000 === 0) {
+    // Visualize roads every tick
+    for(let roomName in Game.rooms) {
+        visualizeRoads(Game.rooms[roomName]);
+    }
+
+    // Force road planning every 100 ticks
+    if(Game.time % 100 === 0) {
         for(let roomName in Game.rooms) {
             constructionManager.planRoads(Game.rooms[roomName]);
         }

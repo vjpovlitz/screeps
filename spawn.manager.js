@@ -10,8 +10,8 @@ module.exports = {
         const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
         const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
         
-        // Spawn harvesters first
-        if(harvesters.length < 2) {
+        // Increase harvester count to 4
+        if(harvesters.length < 4) {
             const newName = 'Harvester' + Game.time;
             Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName, 
                 {memory: {role: 'harvester'}});
