@@ -98,6 +98,12 @@ module.exports = {
             perfTextX, perfY + 2.8,
             {align: 'center', color: '#ffffff', font: 0.6}
         );
+
+        room.visual.text(
+            `⚠️ PRIORITY: Build Towers for Defense!`,
+            perfTextX, perfY + 3.8,
+            {align: 'center', color: '#ff0000', font: 0.7}
+        );
     },
 
     getTypeIcon: function(type) {

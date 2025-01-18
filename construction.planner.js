@@ -35,8 +35,9 @@ module.exports = {
 
     MARYLAND_LANDMARKS: {
         towers: [
-            { name: "Fort McHenry", pos: {x: 2, y: 2} },          // South tower
-            { name: "Fort Washington", pos: {x: 5, y: -12} }      // Adjusted position near Fairhaven
+            { name: "Fort McHenry", pos: {x: 2, y: 2} },          // South tower by spawn
+            { name: "Fort Washington", pos: {x: 3, y: -12} },     // North tower by source
+            { name: "Fort Meade", pos: {x: -8, y: -4} }          // West tower for coverage
         ],
         extensions: [
             "Fairhaven", "North Beach", "Deale", "Shady Side", 
@@ -140,7 +141,7 @@ module.exports = {
     },
 
     planTowers: function(room, spawn) {
-        if(room.controller.level >= 3) {  // First tower at RCL 3
+        if(room.controller.level >= 3) {
             const towers = room.find(FIND_MY_STRUCTURES, {
                 filter: s => s.structureType === STRUCTURE_TOWER
             });
@@ -148,32 +149,19 @@ module.exports = {
             // Plan towers based on RCL and existing towers
             const maxTowers = CONTROLLER_STRUCTURES[STRUCTURE_TOWER][room.controller.level];
             
-            for(let i = towers.length; i < maxTowers && i < this.TOWER_POSITIONS.length; i++) {
-                const towerPos = {
-                    x: spawn.pos.x + this.TOWER_POSITIONS[i].x,
-                    y: spawn.pos.y + this.TOWER_POSITIONS[i].y
-                };
+            // Prioritize tower construction sites
+            this.MARYLAND_LANDMARKS.towers.forEach((tower, index) => {
+                if(index < maxTowers) {
+                    const towerPos = {
+                        x: spawn.pos.x + tower.pos.x,
+                        y: spawn.pos.y + tower.pos.y
+                    };
 
-                if(this.isValidBuildPosition(room, towerPos)) {
-                    room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
-                    
-                    // Visualize tower coverage
-                    room.visual.circle(towerPos.x, towerPos.y, {
-                        radius: 5,
-                        fill: 'transparent',
-                        stroke: '#ff0000',
-                        strokeWidth: 0.15,
-                        opacity: 0.3
-                    });
-
-                    // Add text label
-                    room.visual.text(
-                        `🗼 Tower ${i + 1}`,
-                        towerPos.x, towerPos.y - 1,
-                        {color: '#ff0000', font: 0.5}
-                    );
+                    if(this.isValidBuildPosition(room, towerPos)) {
+                        room.createConstructionSite(towerPos.x, towerPos.y, STRUCTURE_TOWER);
+                    }
                 }
-            }
+            });
         }
     },
 

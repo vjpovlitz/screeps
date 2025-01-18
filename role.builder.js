@@ -48,28 +48,25 @@ module.exports = {
     },
 
     prioritizeConstructionSites: function(sites) {
-        // Updated priority order: Tower > Extension > Spawn > Storage > Road > Container
         const priority = {
-            'tower': 1,
-            'extension': 2,
-            'spawn': 3,
-            'storage': 4,
-            'road': 5,
-            'container': 6
+            'tower': 0,      // Highest priority
+            'road': 1,       // Roads are important for tower coverage
+            'rampart': 2,    // Defense
+            'extension': 3,
+            'spawn': 4,
+            'container': 5
         };
 
-        // Extension names from Maryland cities
-        const extensionNames = [
-            'Bethesda', 'Silver Spring', 'Gaithersburg', 
-            'Bowie', 'Hagerstown', 'Rockville', 'Laurel'
-        ];
-
         return sites.sort((a, b) => {
-            // First sort by priority
+            // Towers get absolute priority
+            if(a.structureType === STRUCTURE_TOWER) return -1;
+            if(b.structureType === STRUCTURE_TOWER) return 1;
+
+            // Then sort by priority and progress
             const priorityDiff = (priority[a.structureType] || 99) - (priority[b.structureType] || 99);
             if(priorityDiff !== 0) return priorityDiff;
             
-            // Then by progress percentage
+            // Prioritize nearly complete structures
             const aProgress = a.progress / a.progressTotal;
             const bProgress = b.progress / b.progressTotal;
             return bProgress - aProgress;
