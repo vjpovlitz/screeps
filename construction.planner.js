@@ -35,15 +35,13 @@ module.exports = {
 
     MARYLAND_LANDMARKS: {
         towers: [
-            { name: "Fort McHenry", pos: {x: 2, y: 2} },    // First tower - Baltimore's defender
-            { name: "Fort Washington", pos: {x: -2, y: -2} } // Second tower - Potomac River defense
+            { name: "Fort McHenry", pos: {x: 2, y: 2} },
+            { name: "Fort Washington", pos: {x: -2, y: -2} }
         ],
         extensions: [
-            // Chesapeake Bay towns near Annapolis
             "Fairhaven", "North Beach", "Deale", "Shady Side", 
             "Mayo", "Arnold", "Severna Park", "Pasadena",
-            "Gibson Island", "Lake Shore", "Cape St. Claire", "Galesville",
-            "Herald Harbor", "Beverly Beach", "Highland Beach", "Riva"
+            "Gibson Island", "Lake Shore", "Cape St. Claire", "Galesville"
         ]
     },
 
@@ -53,13 +51,11 @@ module.exports = {
 
         // Visualize existing and planned towers
         this.MARYLAND_LANDMARKS.towers.forEach(tower => {
-            const pos = {
-                x: spawn.pos.x + tower.pos.x,
-                y: spawn.pos.y + tower.pos.y
-            };
+            const towerX = spawn.pos.x + tower.pos.x;
+            const towerY = spawn.pos.y + tower.pos.y;
 
-            // Check if tower exists using room.lookForAt instead of pos.lookFor
-            const existingTower = room.lookForAt(LOOK_STRUCTURES, pos.x, pos.y)
+            // Check if tower exists using room.lookForAt
+            const existingTower = room.lookForAt(LOOK_STRUCTURES, towerX, towerY)
                 .find(s => s.structureType === STRUCTURE_TOWER);
 
             const color = existingTower ? '#00ff00' : '#ff0000';
@@ -67,12 +63,12 @@ module.exports = {
             // Draw tower name and range
             room.visual.text(
                 `🗼 ${tower.name}`,
-                pos.x, pos.y - 1,
+                towerX, towerY - 1,
                 {color: color, stroke: '#000000', strokeWidth: 0.2, font: 0.5}
             );
 
             // Show tower range
-            room.visual.circle(pos.x, pos.y, {
+            room.visual.circle(towerX, towerY, {
                 radius: 5,
                 fill: 'transparent',
                 stroke: color,
@@ -81,18 +77,19 @@ module.exports = {
             });
         });
 
-        // Visualize extensions with Maryland town names
+        // Visualize extensions
         const extensions = room.find(FIND_MY_STRUCTURES, {
             filter: s => s.structureType === STRUCTURE_EXTENSION
         });
 
         extensions.forEach((extension, index) => {
-            const townName = this.MARYLAND_LANDMARKS.extensions[index] || 'New Town';
-            room.visual.text(
-                `🏘️ ${townName}`,
-                extension.pos.x, extension.pos.y - 0.5,
-                {color: '#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.4}
-            );
+            if(index < this.MARYLAND_LANDMARKS.extensions.length) {
+                room.visual.text(
+                    `🏘️ ${this.MARYLAND_LANDMARKS.extensions[index]}`,
+                    extension.pos.x, extension.pos.y - 0.5,
+                    {color: '#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.4}
+                );
+            }
         });
     },
 
@@ -187,7 +184,6 @@ module.exports = {
         });
 
         if(currentExtensions.length < maxExtensions) {
-            // Use the fortress layout
             const layout = this.EXTENSION_LAYOUTS.fortress;
             for(let i = currentExtensions.length; i < maxExtensions && i < layout.length; i++) {
                 const pos = layout[i];
@@ -196,17 +192,6 @@ module.exports = {
                 
                 if(this.isValidBuildPosition(room, {x: buildX, y: buildY})) {
                     room.createConstructionSite(buildX, buildY, STRUCTURE_EXTENSION);
-                    
-                    // Visualize the planned extension
-                    room.visual.structure(buildX, buildY, STRUCTURE_EXTENSION, {
-                        opacity: 0.3,
-                        stroke: '#ffffff'
-                    });
-                    
-                    // Add road connections for inner and middle ring extensions
-                    if(i < 18) { // First 18 extensions get road connections
-                        this.planExtensionRoads(room, buildX, buildY, spawn.pos);
-                    }
                 }
             }
         }
