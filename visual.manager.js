@@ -1,12 +1,12 @@
 module.exports = {
     run: function(room) {
-        const dashX = 1;  // Original position
-        const dashY = 1;  // Original position
+        const dashX = 35;  // Moved to right side
+        const dashY = 1;   // Keep at top
         const lineHeight = 1.2;
         const padding = 0.5;
-        const boxWidth = 25;
+        const boxWidth = 20;  // Reduced width by 20%
 
-        // Draw original dashboard background
+        // Draw dashboard background
         room.visual.rect(dashX, dashY, boxWidth, 8, {
             fill: '#000000',
             opacity: 0.7,
@@ -14,7 +14,7 @@ module.exports = {
             strokeWidth: 0.05
         });
 
-        // Center all text within the existing box
+        // Center text within smaller box
         const textX = dashX + (boxWidth/2);
         
         // RCL and Energy

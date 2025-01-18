@@ -35,8 +35,8 @@ module.exports = {
 
     MARYLAND_LANDMARKS: {
         towers: [
-            { name: "Fort McHenry", pos: {x: 2, y: 2} },    // South tower
-            { name: "Fort Washington", pos: {x: 0, y: -8} }  // Adjusted to protect Fairhaven
+            { name: "Fort McHenry", pos: {x: 2, y: 2} },          // South tower
+            { name: "Fort Washington", pos: {x: 15, y: -12} }     // Adjusted position near Fairhaven
         ],
         extensions: [
             "Fairhaven", "North Beach", "Deale", "Shady Side", 
